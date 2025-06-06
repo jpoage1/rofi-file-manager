@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -x
+#set -x
 dirs=(
     "$(which editor.sh)"
     "$0"	
@@ -14,4 +14,4 @@ dirs=(
     "$HOME/.config/polybar"
     "$HOME/.vim"
 )
-./menu4.py "/srv/projects/editor-menu/${dirs[@]}"
+./main.py "/srv/projects/editor-menu/${dirs[@]}"

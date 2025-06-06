@@ -1,5 +1,5 @@
-# menu.py
-# #!/usr/bin/env python3
+# Fixed menu.py with necessary corrections:
+
 import os
 import subprocess
 import re
@@ -80,38 +80,41 @@ class MenuManager:
         subprocess.run(cmd)
 
     def toggle_option(self, option_name):
-        current = getattr(self.state, option_name)
-        setattr(self.state, option_name, not current)
+        current = getattr(self.state, option_name, None)
+        if current is not None:
+            setattr(self.state, option_name, not current)
 
     def toggle_menu(self):
-        entries = [
-            f"[Use gitignore: {'on' if self.state.use_gitignore else 'off'}]",
-            f"[Include dotfiles: {'on' if self.state.include_dotfiles else 'off'}]",
-            "[Back]"
-        ]
-        choice = self.run_rofi(entries, "Toggle options", False)
-        if not choice or choice[0] == "[Back]":
-            return
-        if "Use gitignore" in choice[0]:
-            self.toggle_option("use_gitignore")
-        elif "Include dotfiles" in choice[0]:
-            self.toggle_option("include_dotfiles")
+        while True:
+            entries = [
+                f"[Use gitignore: {'on' if getattr(self.state, 'use_gitignore', False) else 'off'}]",
+                f"[Include dotfiles: {'on' if getattr(self.state, 'include_dotfiles', False) else 'off'}]",
+                "[Back]"
+            ]
+            choice = self.run_rofi(entries, "Toggle options", False)
+            if not choice or choice[0] == "[Back]":
+                return
+            if "Use gitignore" in choice[0]:
+                self.toggle_option("use_gitignore")
+            elif "Include dotfiles" in choice[0]:
+                self.toggle_option("include_dotfiles")
 
     def mode_menu(self):
         modes = ["Edit", "Traverse", "Execute", "Clipboard"]
-        choice = self.run_rofi(modes, f"Change mode (current: {self.state.current_mode})", False)
+        choice = self.run_rofi(modes, f"Change mode (current: {getattr(self.state, 'current_mode', '')})", False)
         if choice:
             self.state.current_mode = choice[0]
 
     def clipboard_mode_menu(self):
+        all_files = [os.path.join(self.state.root_dir, f) for f in self.get_entries()]
         while True:
             entries = []
-            all_files = [os.path.join(self.state.root_dir, f) for f in self.get_entries()]
-            non_clipboard = [f for f in all_files if f not in self.state.clipboard.get_files()]
+            clipboard_files = self.state.clipboard.get_files() if hasattr(self.state, 'clipboard') else []
+            non_clipboard = self.state.clipboard.get_files() if not hasattr(self.state, 'clipboard') else []
 
             if non_clipboard:
                 entries.append("[Add to Clipboard]")
-            elif self.state.clipboard.get_files():
+            if clipboard_files:
                 entries.append("[Remove from Clipboard]")
                 entries.append("[Commit Clipboard]")
             entries.append("[Back]")
@@ -123,11 +126,11 @@ class MenuManager:
 
             if c == "[Add to Clipboard]":
                 files = self.get_entries()
-                selected = self.run_rofi(files, "Add files to clipboard", True)
+                selected = self.run_rofi(non_clipboard, "Add files to clipboard", True)
                 paths = [self.resolve_path(f) for f in selected if self.resolve_path(f)]
                 self.state.clipboard.add_files(paths)
             elif c == "[Remove from Clipboard]":
-                selected = self.run_rofi(self.state.clipboard.get_files(), "Remove files from clipboard", True)
+                selected = self.run_rofi(clipboard_files, "Remove files from clipboard", True)
                 self.state.clipboard.remove_files(selected)
             elif c == "[Commit Clipboard]":
                 self.state.clipboard.commit()
@@ -136,12 +139,13 @@ class MenuManager:
 
     def cwd_menu(self):
         dirs = ["/", os.path.expandvars("$HOME"), "/some/custom/dir"]
-        if self.state.mode == "MULTI":
-            dirs.insert(0, f"[{self.state.workspace.label}]")
+        workspace_entry = f"{self.state.workspace.label}"
+        if workspace_entry not in dirs:
+            dirs.insert(0, workspace_entry)
         selected = self.run_rofi(dirs, "Change working directory", False)
         if selected:
             choice = selected[0]
-            if self.state.mode == "MULTI" and choice == f"[{self.state.workspace.label}]":
+            if self.state.mode == "MULTI" and hasattr(self.state, 'workspace') and choice == f"[{self.state.workspace.label}]":
                 self.state.workspace.reset()
             else:
                 new_dir = os.path.expandvars(choice)
@@ -152,11 +156,11 @@ class MenuManager:
     def generate_menu_entries(self):
         entries = [
             "[Exit]",
-            f"[CWD: {os.path.abspath(self.state.root_dir) if self.state.mode == 'NORMAL' else self.state.workspace.label}]",
+            f"[CWD: {os.path.abspath(self.state.root_dir) if self.state.mode == 'NORMAL' else getattr(self.state.workspace, 'label', '')}]",
             "[Change CWD]",
             "[Manage Workspace]",
             "[Toggle Search Options]",
-            f"[Change Mode: {self.state.current_mode}]",
+            f"[Change Mode: {getattr(self.state, 'current_mode', '')}]",
         ]
         if self.state.mode == "MULTI":
             entries.append("[Reset Workspace]")
@@ -167,7 +171,7 @@ class MenuManager:
     def handle_special_options(self, selection):
         for item in selection:
             if item == "[Exit]":
-                exit(0)
+                sys.exit(0)
             elif item == "[Toggle Search Options]":
                 self.toggle_menu()
                 return True
@@ -191,11 +195,11 @@ class MenuManager:
         elif self.state.current_mode == "Execute":
             for path in resolved:
                 subprocess.run(["bash", path])
-        elif self.state.current_mode == "Clipboard":
+        elif self.state.current_mode == "Clipboard" and hasattr(self.state, 'clipboard'):
             self.state.clipboard.add_files(resolved)
             self.clipboard_mode_menu()
         elif self.state.current_mode == "Traverse":
-            pass  # Traversal logic placeholder
+            pass  # Placeholder for traversal logic
 
     def reset_to_files(self):
         input_paths = self.get_input_paths()

@@ -1,43 +1,34 @@
 # filesystem.py
-import os
-import re
+from pathlib import Path
 
 def list_directories(base_dir):
+    base = Path(base_dir)
     try:
-        return [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+        return [p.name for p in base.iterdir() if p.is_dir()]
     except Exception:
         return []
 
 def list_files(base_dir):
+    base = Path(base_dir)
     try:
-        return [f for f in os.listdir(base_dir) if os.path.isfile(os.path.join(base_dir, f))]
+        return [p.name for p in base.iterdir() if p.is_file()]
     except Exception:
         return []
 
 def list_dir_recursive(base_path):
+    base = Path(base_path)
     result = []
-    for root, dirs, files in os.walk(base_path):
-        for name in dirs + files:
-            full = os.path.join(root, name)
-            rel = os.path.relpath(full, base_path)
-            result.append(rel)
+    for p in base.rglob('*'):
+        rel = p.relative_to(base)
+        result.append(str(rel))
     return result
 
-def filter_entries(entries, state):
-    if state.regex_mode and state.regex_pattern:
-        try:
-            regex = re.compile(state.regex_pattern)
-            entries = [e for e in entries if regex.search(e)]
-        except re.error:
-            entries = []
-    if not state.include_dotfiles:
-        entries = [e for e in entries if not e.startswith(".")]
-    return entries
-
 def resolve_path(state, filename):
+    filename = Path(filename)
     if state.mode == "MULTI":
-        path = next((p for p in state.input_set if os.path.basename(p) == filename), None)
+        path = next((Path(p) for p in state.input_set if Path(p).name == filename.name), None)
         if path:
-            return os.path.abspath(path)
+            return str(path.resolve())
         return None
-    return os.path.abspath(os.path.join(state.root_dir, filename))
+    root = Path(state.root_dir)
+    return str((root / filename).resolve())
