@@ -1,9 +1,10 @@
-# Fixed menu.py with necessary corrections:
-
-import os
+# menu.py
 import subprocess
 import re
 import sys
+from pathlib import Path
+
+import os
 
 class MenuManager:
     def __init__(self, state, editor="nvim", rofi_cmd="rofi"):
@@ -24,20 +25,22 @@ class MenuManager:
     def resolve_path(self, filename):
         if self.state.mode == "MULTI":
             for p in self.state.input_set:
-                if os.path.basename(p) == filename:
-                    return os.path.abspath(p)
+                if Path(p).name == filename:
+                    return str(Path(p).resolve())
             return None
-        return os.path.abspath(os.path.join(self.state.root_dir, filename))
+        return str((Path(self.state.root_dir) / filename).resolve())
 
     def list_directories(self, base_dir):
+        base = Path(base_dir)
         try:
-            return [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+            return [d.name for d in base.iterdir() if d.is_dir()]
         except Exception:
             return []
 
     def list_files(self, base_dir):
+        base = Path(base_dir)
         try:
-            return [f for f in os.listdir(base_dir) if os.path.isfile(os.path.join(base_dir, f))]
+            return [f.name for f in base.iterdir() if f.is_file()]
         except Exception:
             return []
 
@@ -54,29 +57,54 @@ class MenuManager:
 
     def get_entries(self):
         if self.state.mode == "MULTI":
-            entries = [os.path.basename(p) for p in self.state.input_set]
+            entries = [Path(p).name for p in self.state.input_set]
+            print("DEBUG: MULTI mode entries:", entries, file=sys.stderr)
             return self.filter_entries(entries)
 
         base = self.state.root_dir
+        print("DEBUG: os.listdir('/') =", os.listdir('/'), file=sys.stderr)
+        print("DEBUG: root_dir =", base, file=sys.stderr)
         if not base:
+            print("DEBUG: root_dir is empty or None", file=sys.stderr)
             return []
 
-        if self.state.search_dirs_only:
-            entries = self.list_directories(base)
-        elif self.state.search_files_only:
-            entries = self.list_files(base)
-        else:
-            try:
-                entries = os.listdir(base)
-            except Exception:
-                entries = []
+        base_path = Path(base)
+        print("DEBUG: base_path.exists() =", base_path.exists(), file=sys.stderr)
+        print("DEBUG: base_path.is_dir() =", base_path.is_dir(), file=sys.stderr)
 
-        return self.filter_entries(entries)
+        try:
+            dirs = []
+            files = []
+            for p in base_path.iterdir():
+                if p.is_dir():
+                    dirs.append(p.name)
+                elif p.is_file():
+                    files.append(p.name)
+
+            entries = []
+            if self.state.show_dirs:
+                entries.extend(dirs)
+            if self.state.show_files:
+                entries.extend(files)
+
+            print("DEBUG: dirs =", dirs, file=sys.stderr)
+            print("DEBUG: files =", files, file=sys.stderr)
+            print("DEBUG: combined entries =", entries, file=sys.stderr)
+        except Exception as e:
+            print("DEBUG: Exception while listing base_path:", e, file=sys.stderr)
+            entries = []
+
+
+        filtered = self.filter_entries(entries)
+        print("DEBUG: filtered entries =", filtered, file=sys.stderr)
+        return filtered
 
     def edit_files(self, files):
         if not files:
             return
-        cmd = ["xterm", "-fa", "DejaVu Sans Mono Book", "-fs", "12", "-e", self.editor] + files
+        # Convert to absolute paths using Path
+        abs_files = [str(Path(f).resolve()) for f in files]
+        cmd = ["xterm", "-fa", "DejaVu Sans Mono Book", "-fs", "12", "-e", self.editor] + abs_files
         subprocess.run(cmd)
 
     def toggle_option(self, option_name):
@@ -87,6 +115,8 @@ class MenuManager:
     def toggle_menu(self):
         while True:
             entries = [
+                f"[Show files: {'on' if getattr(self.state, 'show_files', True) else 'off'}]",
+                f"[Show directories: {'on' if getattr(self.state, 'show_dirs', True) else 'off'}]",
                 f"[Use gitignore: {'on' if getattr(self.state, 'use_gitignore', False) else 'off'}]",
                 f"[Include dotfiles: {'on' if getattr(self.state, 'include_dotfiles', False) else 'off'}]",
                 "[Back]"
@@ -98,7 +128,10 @@ class MenuManager:
                 self.toggle_option("use_gitignore")
             elif "Include dotfiles" in choice[0]:
                 self.toggle_option("include_dotfiles")
-
+            elif "Show files" in choice[0]:
+                self.toggle_option("show_files")
+            elif "Show directories" in choice[0]:
+                self.toggle_option("show_dirs")
     def mode_menu(self):
         modes = ["Edit", "Traverse", "Execute", "Clipboard"]
         choice = self.run_rofi(modes, f"Change mode (current: {getattr(self.state, 'current_mode', '')})", False)
@@ -106,11 +139,11 @@ class MenuManager:
             self.state.current_mode = choice[0]
 
     def clipboard_mode_menu(self):
-        all_files = [os.path.join(self.state.root_dir, f) for f in self.get_entries()]
+        all_files = [str(Path(self.state.root_dir) / f) for f in self.get_entries()]
         while True:
             entries = []
             clipboard_files = self.state.clipboard.get_files() if hasattr(self.state, 'clipboard') else []
-            non_clipboard = self.state.clipboard.get_files() if not hasattr(self.state, 'clipboard') else []
+            non_clipboard = [] if hasattr(self.state, 'clipboard') else []
 
             if non_clipboard:
                 entries.append("[Add to Clipboard]")
@@ -125,7 +158,6 @@ class MenuManager:
             c = choice[0]
 
             if c == "[Add to Clipboard]":
-                files = self.get_entries()
                 selected = self.run_rofi(non_clipboard, "Add files to clipboard", True)
                 paths = [self.resolve_path(f) for f in selected if self.resolve_path(f)]
                 self.state.clipboard.add_files(paths)
@@ -138,25 +170,25 @@ class MenuManager:
                 break
 
     def cwd_menu(self):
-        dirs = ["/", os.path.expandvars("$HOME"), "/some/custom/dir"]
-        workspace_entry = f"{self.state.workspace.label}"
-        if workspace_entry not in dirs:
+        dirs = ["/", str(Path.home()), "/some/custom/dir"]
+        workspace_entry = getattr(self.state.workspace, 'label', None)
+        if workspace_entry and workspace_entry not in dirs:
             dirs.insert(0, workspace_entry)
         selected = self.run_rofi(dirs, "Change working directory", False)
         if selected:
             choice = selected[0]
-            if self.state.mode == "MULTI" and hasattr(self.state, 'workspace') and choice == f"[{self.state.workspace.label}]":
+            if self.state.mode == "MULTI" and hasattr(self.state, 'workspace') and choice == f"[{workspace_entry}]":
                 self.state.workspace.reset()
             else:
-                new_dir = os.path.expandvars(choice)
-                if os.path.isdir(new_dir):
-                    self.state.root_dir = new_dir
+                new_dir = Path(choice).expanduser()
+                if new_dir.is_dir():
+                    self.state.root_dir = str(new_dir.resolve())
                     self.state.mode = "NORMAL"
 
     def generate_menu_entries(self):
         entries = [
             "[Exit]",
-            f"[CWD: {os.path.abspath(self.state.root_dir) if self.state.mode == 'NORMAL' else getattr(self.state.workspace, 'label', '')}]",
+            f"[CWD: {str(Path(self.state.root_dir).resolve()) if self.state.mode == 'NORMAL' else getattr(self.state.workspace, 'label', '')}]",
             "[Change CWD]",
             "[Manage Workspace]",
             "[Toggle Search Options]",
@@ -203,15 +235,15 @@ class MenuManager:
 
     def reset_to_files(self):
         input_paths = self.get_input_paths()
-        abs_paths = [os.path.abspath(p) for p in input_paths] if input_paths else []
-        if len(abs_paths) == 1 and os.path.isdir(abs_paths[0]):
+        abs_paths = [str(Path(p).resolve()) for p in input_paths] if input_paths else []
+        if len(abs_paths) == 1 and Path(abs_paths[0]).is_dir():
             self.state.root_dir = abs_paths[0]
             self.state.mode = "NORMAL"
         elif abs_paths:
             self.state.input_set = abs_paths
             self.state.mode = "MULTI"
         else:
-            self.state.root_dir = os.getcwd()
+            self.state.root_dir = str(Path.cwd())
             self.state.mode = "NORMAL"
 
     def get_input_paths(self):
