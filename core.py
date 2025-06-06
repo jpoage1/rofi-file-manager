@@ -6,12 +6,14 @@ import re
 import subprocess
 from filesystem import list_directories
 from filesystem import list_files
-from rofi_interface import toggle_menu
 from rofi_interface import run_rofi
 from filesystem import resolve_path
 from rofi_interface import clipboard_mode_menu
 from rofi_interface import mode_menu
-from main import get_input_paths
+from utils import get_input_paths
+from menu import MenuManager
+from state import State
+
 
 def get_entries(state):
     if state.mode == "MULTI":
@@ -50,6 +52,7 @@ def filter_entries(entries, state):
     return entries
 
 def handle_special_options(state, selection):
+    from rofi_interface import toggle_menu
     for item in selection:
         if item == "[Exit]":
             exit(0)
@@ -138,3 +141,25 @@ def cwd_menu(state):
             if os.path.isdir(new_dir):
                 state.root_dir = new_dir
                 state.mode = "NORMAL"
+
+def main(state):
+    menu_manager = MenuManager(state)
+    menu_manager.main_loop()
+
+if __name__ == "__main__":
+    input_paths = get_input_paths()
+    state = State()
+    if input_paths:
+        abs_paths = [os.path.abspath(p) for p in input_paths]
+        if len(abs_paths) == 1 and os.path.isdir(abs_paths[0]):
+            state.root_dir = abs_paths[0]
+            state.mode = "NORMAL"
+        else:
+            state.input_set = abs_paths
+            state.mode = "MULTI"
+    else:
+        state.root_dir = os.getcwd()
+        state.mode = "NORMAL"
+
+    main(state)
+

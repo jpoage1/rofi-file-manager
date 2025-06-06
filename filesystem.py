@@ -41,15 +41,3 @@ def resolve_path(state, filename):
             return os.path.abspath(path)
         return None
     return os.path.abspath(os.path.join(state.root_dir, filename))
-
-def list_directories(base_dir):
-    try:
-        return [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
-    except Exception:
-        return []
-
-def list_files(base_dir):
-    try:
-        return [f for f in os.listdir(base_dir) if os.path.isfile(os.path.join(base_dir, f))]
-    except Exception:
-        return []
