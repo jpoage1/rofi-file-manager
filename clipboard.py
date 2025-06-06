@@ -1,25 +1,25 @@
-import subprocess
 import pyperclip
-def read_file_safe(path):
+from pathlib import Path
+def read_file_safe(path: Path) -> str:
     try:
-        with open(path, "r") as f:
-            return f.read()
+        return path.read_text()
     except Exception:
         return ""
-
 class Clipboard:
     def __init__(self):
         self.queue = []
 
     def add_files(self, files):
         for f in files:
-            if f and f not in self.queue:
-                self.queue.append(f)
+            p = Path(f)
+            if p.is_file() and p not in self.queue:
+                self.queue.append(p)
 
     def remove_files(self, files):
         for f in files:
-            if f in self.queue:
-                self.queue.remove(f)
+            p = Path(f)
+            if p in self.queue:
+                self.queue.remove(p)
 
     def clear(self):
         self.queue.clear()

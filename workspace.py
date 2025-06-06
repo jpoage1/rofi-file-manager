@@ -1,14 +1,16 @@
 # workspace.py
-import os
+
+from pathlib import Path
 class Workspace:
-    def __init__(self, label="Workspace"):
+    def __init__(self, label="⟪Workspace⟫"):
         self.label = label
         self.files = set()
 
     def add(self, root_dir, entries):
+        root = Path(root_dir)
         for entry in entries:
-            full_path = os.path.join(root_dir, entry)
-            if os.path.exists(full_path):
+            full_path = root / entry
+            if full_path.exists():
                 self.files.add(full_path)
 
     def remove(self, entries):
