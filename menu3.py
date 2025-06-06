@@ -3,6 +3,7 @@ import os
 import subprocess
 import re
 import copy
+import sys
 
 class State:
     def __init__(self):
@@ -160,6 +161,19 @@ def clipboard_mode_menu(state):
             state.clipboard_queue.clear()
         elif c == "[Back]":
             break
+def get_input_paths():
+    paths = []
+
+    # Collect from argv (skip script name)
+    if len(sys.argv) > 1:
+        paths.extend(sys.argv[1:])
+
+    # Collect from stdin if piped
+    if not sys.stdin.isatty():
+        stdin_paths = [line.strip() for line in sys.stdin if line.strip()]
+        paths.extend(stdin_paths)
+
+    return paths
 
 def main():
     state = State()
@@ -212,6 +226,52 @@ def main():
         elif state.current_mode == "Traverse":
             # Could add directory traversal here, skipping for brevity
             pass
+def interpret_main_menu(paths, state):
+    for path in paths:
+        if os.path.isdir(path):
+            entries = [os.path.join(path, e) for e in os.listdir(path)]
+        else:
+            entries = [path]
 
+        selection = run_rofi(entries, "Select file to edit", True)
+        if not selection:
+            continue
+
+        if state.current_mode == "Edit":
+            edit_files(selection)
+        elif state.current_mode == "Execute":
+            for f in selection:
+                subprocess.run(["bash", f])
+        elif state.current_mode == "Clipboard":
+            for f in selection:
+                if f not in state.clipboard_queue:
+                    state.clipboard_queue.append(f)
+            clipboard_mode_menu(state)
+
+
+def get_input_paths():
+    paths = []
+
+    # Collect from argv (skip script name)
+    if len(sys.argv) > 1:
+        paths.extend(sys.argv[1:])
+
+    # Collect from stdin if piped
+    if not sys.stdin.isatty():
+        stdin_paths = [line.strip() for line in sys.stdin if line.strip()]
+        paths.extend(stdin_paths)
+
+    return paths
 if __name__ == "__main__":
-    main()
+    input_paths = get_input_paths()
+    state = State()
+    print(input_paths)
+    # exit(0)
+    if input_paths:
+        if os.path.isdir(input_paths[0]):
+            state.root_dir = input_paths[0]
+        elif os.path.isfile(input_paths[0]):
+            state.root_dir = os.path.dirname(input_paths[0])
+        main()
+    else:
+        main()
