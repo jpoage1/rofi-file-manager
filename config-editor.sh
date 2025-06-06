@@ -14,4 +14,4 @@ dirs=(
     "$HOME/.config/polybar"
     "$HOME/.vim"
 )
-./menu3.py "/srv/projects/editor-menu/${dirs[@]}"
+./menu4.py "/srv/projects/editor-menu/${dirs[@]}"

@@ -1,7 +1,6 @@
 # rofi_interface.py
 import subprocess
 import os
-from core import get_entries
 
 from filesystem import resolve_path
 
@@ -45,6 +44,7 @@ def toggle_option(state, option_name):
     setattr(state, option_name, not current)
 
 def clipboard_mode_menu(state):
+    from core import get_entries
     while True:
         entries = []
         all_files = [os.path.join(state.root_dir, f) for f in get_entries(state)]
