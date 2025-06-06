@@ -3,7 +3,6 @@ import os
 import subprocess
 import re
 import copy
-import sys
 
 class State:
     def __init__(self):
@@ -161,47 +160,58 @@ def clipboard_mode_menu(state):
             state.clipboard_queue.clear()
         elif c == "[Back]":
             break
-def interpret_main_menu(paths, state):
-    for path in paths:
-        if os.path.isdir(path):
-            entries = [os.path.join(path, e) for e in os.listdir(path)]
-        else:
-            entries = [path]
 
-        selection = run_rofi(entries, "Select file to edit", True)
+def main():
+    state = State()
+    while True:
+        entries = [
+            "[Exit]",
+            "[Toggle Search Options]",
+            f"[Change Mode: {state.current_mode}]",
+            "---"
+        ] + get_entries(state)
+
+        selection = run_rofi(entries, "Select files or options", True)
         if not selection:
             continue
 
+        # Handle extended options
+        handled = False
+        for item in selection:
+            if item == "[Exit]":
+                exit(0)
+            elif item == "[Toggle Search Options]":
+                toggle_menu(state)
+                handled = True
+                break
+            elif item.startswith("[Change Mode:"):
+                mode_menu(state)
+                handled = True
+                break
+
+        if handled:
+            continue
+
+        # Filter out extended options to get files only
+        files = [item for item in selection if not item.startswith("[") and item != "---"]
+        if not files:
+            continue
+
         if state.current_mode == "Edit":
-            edit_files(selection)
+            edit_files([os.path.join(state.root_dir, f) for f in files])
         elif state.current_mode == "Execute":
-            for f in selection:
-                subprocess.run(["bash", f])
+            for f in files:
+                path = os.path.join(state.root_dir, f)
+                subprocess.run(["bash", path])
         elif state.current_mode == "Clipboard":
-            for f in selection:
-                if f not in state.clipboard_queue:
-                    state.clipboard_queue.append(f)
+            for f in files:
+                path = os.path.join(state.root_dir, f)
+                if path not in state.clipboard_queue:
+                    state.clipboard_queue.append(path)
             clipboard_mode_menu(state)
-def get_input_paths():
-    paths = []
-
-    # Collect from argv (skip script name)
-    if len(sys.argv) > 1:
-        paths.extend(sys.argv[1:])
-
-    # Collect from stdin if piped
-    if not sys.stdin.isatty():
-        stdin_paths = [line.strip() for line in sys.stdin if line.strip()]
-        paths.extend(stdin_paths)
-
-    return paths
+        elif state.current_mode == "Traverse":
+            # Could add directory traversal here, skipping for brevity
+            pass
 
 if __name__ == "__main__":
-    input_paths = get_input_paths()
-    state = State()
-
-    if input_paths:
-        interpret_main_menu(input_paths, state)
-    else:
-        main()
-
+    main()
