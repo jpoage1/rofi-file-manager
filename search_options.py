@@ -1,5 +1,7 @@
 # search_options.py
 
+from rofi_interface import run_rofi
+
 class SearchOptions:
     def __init__(self, state):
         self.state = state

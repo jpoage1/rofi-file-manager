@@ -5,9 +5,12 @@ from filesystem import list_files, list_directories
 from core import edit_files
 from pathlib import Path
 
+from search_options import SearchOptions
+
 class MenuManager:
     def __init__(self, state):
         self.state = state
+        self.search_options = SearchOptions(state)
         self.menu_structure = {
             'Browse Workspace': self.browse_workspace,
             'Workspace Management': {
@@ -40,25 +43,39 @@ class MenuManager:
 
     def browse_workspace(self):
         while True:
-            entries = [str(p) for p in self.state.workspace.list()]
+            raw_entries = [str(p) for p in self.state.workspace.list()]
+            entries = self.prepend_search_options_entry(raw_entries)
             selection = run_rofi(entries, prompt="Workspace Files")
             if not selection:
                 break
+            if self.handle_search_options_entry(selection[0]):
+                continue
+            # normal selection handling
             edit_files(selection)
 
+    def get_root_dir(self):
+        if not self.state.root_dir:
+            self.state.root_dir = Path(".")
+        return self.state.root_dir
+    
     def traverse_directory(self):
         # Implement the logic to traverse to a new directory
         dirs = list_directories(self.state.root_dir)
         selection = run_rofi(dirs, prompt="Select Directory")
         if selection:
-            self.state.root_dir = str(Path(self.state.root_dir) / selection[0])
+            self.state.root_dir = str(Path(self.get_root_dir()) / selection[0])
 
     def add_files(self):
-        # Implement the logic to add files to the workspace
-        files = list_files(self.state.root_dir)
-        selection = run_rofi(files, prompt="Select Files to Add", multi_select=True)
-        if selection:
-            self.state.workspace.add(self.state.root_dir, selection)
+        while True:
+            root_dir = self.get_root_dir()
+            raw_entries = list_files(root_dir)
+            entries = self.prepend_search_options_entry(raw_entries)
+            selection = run_rofi(entries, prompt="Select Files to Add", multi_select=True)
+            if not selection:
+                break
+            if self.handle_search_options_entry(selection[0]):
+                continue
+            self.state.workspace.add(root_dir, selection)
 
     def remove_files(self):
         # Implement the logic to remove files from the workspace
@@ -68,18 +85,28 @@ class MenuManager:
             self.state.workspace.remove(selection)
 
     def add_workspace_to_clipboard(self):
-        # Implement the logic to add workspace paths to the clipboard queue
-        entries = [str(p) for p in self.state.workspace.list()]
-        selection = run_rofi(entries, prompt="Select Workspace Paths", multi_select=True)
-        if selection:
+        while True:
+            raw_entries = [str(p) for p in self.state.workspace.list()]
+            entries = self.prepend_search_options_entry(raw_entries)
+            selection = run_rofi(entries, prompt="Select Workspace Paths", multi_select=True)
+            if not selection:
+                break
+            if self.handle_search_options_entry(selection[0]):
+                continue
             self.state.clipboard.add_files(selection)
 
     def add_cwd_to_clipboard(self):
-        # Implement the logic to add cwd paths to the clipboard queue
-        files = list_files(self.state.root_dir)
-        selection = run_rofi(files, prompt="Select CWD Files", multi_select=True)
-        if selection:
-            self.state.clipboard.add_files([str(Path(self.state.root_dir) / f) for f in selection])
+        while True:
+            root_dir = self.get_root_dir()
+            raw_entries = list_files(root_dir)
+            entries = self.prepend_search_options_entry(raw_entries)
+            selection = run_rofi(entries, prompt="Select CWD Files", multi_select=True)
+            if not selection:
+                break
+            if self.handle_search_options_entry(selection[0]):
+                continue
+            self.state.clipboard.add_files([str(Path(root_dir) / f) for f in selection])
+
 
     def remove_from_clipboard(self):
         # Implement the logic to remove paths from the clipboard queue
@@ -87,3 +114,13 @@ class MenuManager:
         selection = run_rofi(entries, prompt="Select Clipboard Paths to Remove", multi_select=True)
         if selection:
             self.state.clipboard.remove_files(selection)
+
+    def prepend_search_options_entry(self, entries):
+        # Insert "Enter Search Options Menu" at the start
+        return ["Enter Search Options Menu"] + entries
+
+    def handle_search_options_entry(self, selection):
+        if selection == "Enter Search Options Menu":
+            self.search_options.run_menu()
+            return True
+        return False
