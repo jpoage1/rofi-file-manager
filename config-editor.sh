@@ -1,18 +1,53 @@
 #!/usr/bin/env bash
-#set -x
+# set -x
+
+list_dirs() {
+    find "$@" -type d
+}
+list_files() {
+    find "$@" -type f
+}
+
+hide_dotfiles() {
+    grep -v '/\.[^/]*'
+}
+
+list_git_files() {
+    for dir in "$@"; do
+        echo "Checking $dir"
+        if [ -d "$dir" ] && [ -d "$dir/.git" ]; then
+            echo "In $dir"
+            cd "$dir" || continue
+            git ls-files --cached --others --exclude-standard | sed "s|^|$dir/|"
+        else
+            echo "Skipping $dir"
+        fi
+    done
+}
 dirs=(
     "$(which editor.sh)"
     "$0"
-    "$HOME/.config/i3"
-    "$HOME/.config/home-manager"
-    "/nix-config"
-    "$HOME/.config/tmux"
-    "$HOME/.config/fish"
-    "$HOME/.config/zsh"
-    "$HOME/.config/bash"
-    "$HOME/.config/posix"
-    "$HOME/.config/polybar"
-    "$HOME/.vim"
+    $(
+        list_git_files \
+            "$HOME/.config/i3" \
+            "$HOME/.config/home-manager" \
+            "/nix-config" \
+            "$HOME/.config/tmux" \
+            "$HOME/.config/fish" \
+            "$HOME/.config/zsh" \
+            "$HOME/.config/bash" \
+            "$HOME/.config/posix" \
+            "$HOME/.config/polybar" \
+            "$HOME/.vim"
+    )
 )
+# dirs=($(list_git_files "$HOME/.config/i3" "$HOME/.config/home-manager" "/nix-config" \
+#     "$HOME/.config/tmux" "$HOME/.config/fish" "$HOME/.config/zsh" \
+#     "$HOME/.config/bash" "$HOME/.config/posix" "$HOME/.config/polybar" "$HOME/.vim"))
+
+# echo "${dirs[@]}"
+# exit
+
+# printf "%s\n" "${dirs[@]}" | grep "$1"
 source /srv/projects/editor-menu/editor.sh
 run "${dirs[@]}"
