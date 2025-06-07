@@ -2,9 +2,9 @@
 
 from pathlib import Path
 class Workspace:
-    def __init__(self, label="⟪Workspace⟫"):
-        self.label = label
+    def __init__(self, paths):
         self.files = set()
+        self.paths = [Path(p) if not isinstance(p, Path) else p for p in paths]
 
     def add(self, root_dir, entries):
         root = Path(root_dir)
@@ -22,3 +22,7 @@ class Workspace:
 
     def reset(self):
         self.files.clear()
+
+    def list(self):
+        for path in self.paths:
+            yield from path.glob("**/*")  # or customized logic

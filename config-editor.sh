@@ -2,7 +2,7 @@
 #set -x
 dirs=(
     "$(which editor.sh)"
-    "$0"	
+    "$0"
     "$HOME/.config/i3"
     "$HOME/.config/home-manager"
     "/nix-config"
@@ -14,4 +14,5 @@ dirs=(
     "$HOME/.config/polybar"
     "$HOME/.vim"
 )
-./main.py "/srv/projects/editor-menu/${dirs[@]}"
+source /srv/projects/editor-menu/editor.sh
+run "${dirs[@]}"

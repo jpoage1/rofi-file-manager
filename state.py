@@ -1,4 +1,5 @@
 # state.py
+from pathlib import Path
 from workspace import Workspace
 from clipboard import Clipboard
 class State:
@@ -6,19 +7,30 @@ class State:
         self.current_mode = "Edit"
         self.use_gitignore = True
         self.include_dotfiles = False
-        self.search_dirs_only = False
-        self.search_files_only = True
+        self.directory_expansion = True
+        self.expansion_recursion = True
         self.regex_mode = False
         self.regex_pattern = ""
-        self.root_dir = "."
+        # self.search_dirs_only = False
+        # self.search_files_only = True
+        self.show_files = True
+        self.show_dirs = True
+        self.root_dir = None
         self.clipboard_queue = []
         self.state_stack = []
         self.input_set = []
-        self.mode = "NORMAL"  # or "MULTI"
-        self.workspace_label = "Workspace"
         self.workspace_files = set()
         self.clipboard = Clipboard()
-        self.workspace = Workspace()
+        self.workspace = None
+
+    def init_workspace(self):
+        if self.input_set:
+            paths = [Path(p) for p in self.input_set]
+        elif self.root_dir:
+            paths = [Path(self.root_dir)]
+        else:
+            paths = [Path.cwd()]
+        self.workspace = Workspace(self.input_set or [self.root_dir])
 
 
     def push_state(self):

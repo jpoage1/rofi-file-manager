@@ -23,12 +23,3 @@ def list_dir_recursive(base_path):
         result.append(str(rel))
     return result
 
-def resolve_path(state, filename):
-    filename = Path(filename)
-    if state.mode == "MULTI":
-        path = next((Path(p) for p in state.input_set if Path(p).name == filename.name), None)
-        if path:
-            return str(path.resolve())
-        return None
-    root = Path(state.root_dir)
-    return str((root / filename).resolve())
