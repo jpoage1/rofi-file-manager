@@ -13,14 +13,14 @@ def main(state):
 
 if __name__ == "__main__":
     input_paths = get_input_paths()
+
     state = State()
+    state = State.load_from_file("workspace_state.json")
+    state.init_workspace()
 
     if input_paths:
         abs_paths = [Path(p).resolve() for p in input_paths]
-        if len(abs_paths) == 1 and abs_paths[0].is_dir():
-            state.root_dir = str(abs_paths[0])
-        else:
-            state.input_set = [str(p) for p in abs_paths]
+        state.input_set = [str(p) for p in abs_paths]
     else:
         state.root_dir = str(Path.cwd())
     state.init_workspace()

@@ -1,9 +1,10 @@
 # state.py
 from pathlib import Path
+import json
 from workspace import Workspace
 from clipboard import Clipboard
 class State:
-    def __init__(self):
+    def __init__(self, workspace=None, clipboard=None, root_dir=None):
         self.current_mode = "Edit"
         self.use_gitignore = True
         self.include_dotfiles = False
@@ -15,13 +16,13 @@ class State:
         # self.search_files_only = True
         self.show_files = True
         self.show_dirs = True
-        self.root_dir = None
+        self.root_dir = root_dir
         self.clipboard_queue = []
         self.state_stack = []
         self.input_set = []
         self.workspace_files = set()
-        self.clipboard = Clipboard()
-        self.workspace = None
+        self.clipboard = clipboard or Clipboard()
+        self.workspace = workspace or Workspace("workspace.json")
 
     def init_workspace(self):
         if self.input_set:
@@ -30,7 +31,16 @@ class State:
             paths = [Path(self.root_dir)]
         else:
             paths = [Path.cwd()]
-        self.workspace = Workspace(self.input_set or [self.root_dir])
+        self.workspace = Workspace(paths)
+        for base in paths:
+            base = Path(base)
+            if base.is_file():
+                self.workspace.files.add(base.resolve())
+            elif base.is_dir():
+                for p in base.rglob("*"):
+                    if p.is_file():
+                        self.workspace.files.add(p.resolve())
+
 
 
     def push_state(self):
@@ -59,3 +69,22 @@ class State:
             self.regex_pattern = snapshot["regex_pattern"]
             self.root_dir = snapshot["root_dir"]
             self.clipboard.restore(snapshot["clipboard_queue"])
+    def save_to_file(self, path):
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load_from_file(cls, path):
+        path = Path(path)
+        if not path.exists():
+            path.write_text(json.dumps({}))
+        with open(path) as f:
+            data = json.load(f)
+        return cls.from_dict(data)
+    
+    @classmethod
+    def from_dict(cls, data):
+        workspace = Workspace("workspace.json")
+        clipboard = Clipboard()
+        root_dir = data.get("root_dir")
+        return cls(workspace=workspace, clipboard=clipboard, root_dir=root_dir)
