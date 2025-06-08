@@ -29,4 +29,5 @@ if __name__ == "__main__":
         cwd=args.cwd
     )
     state = State(workspace)
+    workspace.setState(state)
     main(state)

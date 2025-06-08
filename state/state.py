@@ -101,3 +101,7 @@ class State:
             # --- END NEW ---
             # is_dirty should NOT be persisted as it's a runtime flag
         }
+    def autoSave(self, autoSave):
+        if self.auto_save_enabled:
+            autoSave()
+            self.state.is_dirty = False
