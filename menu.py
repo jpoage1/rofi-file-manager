@@ -1,11 +1,12 @@
-# menu_manager.py
-
+from pathlib import Path
 from rofi_interface import run_rofi
 from filesystem import list_files, list_directories
 from core import edit_files
-from pathlib import Path
-
 from search_options import SearchOptions
+from workspace_utils import get_filtered_workspace_paths
+from tree_utils import build_tree, flatten_tree
+from filters import get_entries
+
 
 class MenuManager:
     def __init__(self, state):
@@ -18,14 +19,14 @@ class MenuManager:
             'Workspace Management': {
                 'Traverse to a new directory': self.traverse_directory,
                 'Add files': self.add_files,
-                'Remove files': self.remove_files
+                'Remove files': self.remove_files,
             },
             'Clipboard Management': {
                 'Commit clipboard queue to the clipboard': lambda: None,
                 'Add to workspace paths to clipboard queue': self.add_workspace_to_clipboard,
                 'Add cwd paths to clipboard queue': self.add_cwd_to_clipboard,
-                'Remove from clipboard queue': self.remove_from_clipboard
-            }
+                'Remove from clipboard queue': self.remove_from_clipboard,
+            },
         }
 
     def main_loop(self):
@@ -33,154 +34,122 @@ class MenuManager:
 
     def navigate_menu(self, menu):
         while True:
-            options = list(menu.keys())
-            choice = run_rofi(options, prompt="Select an option")
+            choice = run_rofi(list(menu.keys()), prompt="Select an option")
             if not choice:
-                break
-            selected = choice[0]
-            action = menu[selected]
+                return
+            action = menu[choice[0]]
             if callable(action):
                 action()
             elif isinstance(action, dict):
                 self.navigate_menu(action)
 
     def search_workspace(self):
-        while True:
-            entries = [str(p) for p in self.state.workspace.list()]
-            # entries = self.prepend_search_options_entry(raw_entries)
-            selection = run_rofi(entries, prompt="Workspace Files")
-            if not selection:
-                break
-            # if self.handle_search_options_entry(selection[0]):
-            #     continue
-            # normal selection handling
-            edit_files(selection)
+        entries = get_entries(self.state)
+        entries_str = [str(e) for e in entries]
+        tree = build_tree(entries_str)
+        choices = flatten_tree(tree)
 
-    def get_root_dir(self):
-        if not self.state.root_dir:
-            self.state.root_dir = Path(".")
+        while True:
+            selection = run_rofi(choices, prompt="Workspace Files")
+            if not selection:
+                return
+            edit_files([Path(s) for s in selection])
+
+    def get_root_dir(self) -> Path:
+        root = self.state.root_dir
+        if not root:
+            root = Path(".")
+        elif isinstance(root, str):
+            root = Path(root)
+        self.state.root_dir = root.resolve()
         return self.state.root_dir
-    
+
     def traverse_directory(self):
         while True:
             root_dir = self.get_root_dir()
-            # Implement the logic to traverse to a new directory
             dirs = list_directories(root_dir)
-            selection = run_rofi(dirs, prompt="Select Directory")
+            selection = run_rofi([str(d) for d in dirs], prompt="Select Directory")
             if not selection:
-                break
-            self.state.root_dir = str(Path(root_dir) / selection[0])
+                return
+            self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
 
     def add_files(self):
         while True:
             root_dir = self.get_root_dir()
             entries = list_files(root_dir)
-            # entries = self.prepend_search_options_entry(raw_entries)
-            selection = run_rofi(entries, prompt="Select Files to Add", multi_select=True)
+            selection = run_rofi([str(e) for e in entries], prompt="Select Files to Add", multi_select=True)
             if not selection:
-                break
-            # if self.handle_search_options_entry(selection[0]):
-            #     continue
-            self.state.workspace.add(root_dir, selection)
+                return
+            selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
+            self.state.workspace.add(selected, root_dir=root_dir)
 
     def remove_files(self):
         while True:
-            # Implement the logic to remove files from the workspace
-            entries = [str(p) for p in self.state.workspace.list()]
-            selection = run_rofi(entries, prompt="Select Files to Remove", multi_select=True)
+            entries = self.state.workspace.list()
+            selection = run_rofi([str(p) for p in entries], prompt="Select Files to Remove", multi_select=True)
             if not selection:
-                break
-            self.state.workspace.remove(selection)
+                return
+            selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
+            self.state.workspace.remove(selected)
 
     def add_workspace_to_clipboard(self):
         while True:
-            raw_entries = [str(p) for p in self.state.workspace.list()]
-            # entries = self.prepend_search_options_entry(raw_entries)
-            selection = run_rofi(entries, prompt="Select Workspace Paths", multi_select=True)
+            entries = self.state.workspace.list()
+            selection = run_rofi([str(p) for p in entries], prompt="Select Workspace Paths", multi_select=True)
             if not selection:
-                break
-            # if self.handle_search_options_entry(selection[0]):
-            #     continue
-            self.state.clipboard.add_files(selection)
+                return
+            selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
+            self.state.clipboard.add_files(selected)
 
     def add_cwd_to_clipboard(self):
         while True:
             root_dir = self.get_root_dir()
             entries = list_files(root_dir)
-            # entries = self.prepend_search_options_entry(raw_entries)
-            selection = run_rofi(entries, prompt="Select CWD Files", multi_select=True)
+            selection = run_rofi([str(e) for e in entries], prompt="Select CWD Files", multi_select=True)
             if not selection:
-                break
-            # if self.handle_search_options_entry(selection[0]):
-            #     continue
-            self.state.clipboard.add_files([str(Path(root_dir) / f) for f in selection])
-
+                return
+            selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
+            self.state.clipboard.add_files(selected)
 
     def remove_from_clipboard(self):
         while True:
-            # Implement the logic to remove paths from the clipboard queue
-            entries = [str(p) for p in self.state.clipboard.get_files()]
-            selection = run_rofi(entries, prompt="Select Clipboard Paths to Remove", multi_select=True)
+            entries = self.state.clipboard.get_files()
+            selection = run_rofi([str(p) for p in entries], prompt="Select Clipboard Paths to Remove", multi_select=True)
             if not selection:
-                break
-            self.state.clipboard.remove_files(selection)
-
-    def prepend_search_options_entry(self, entries):
-        # Insert "Enter Search Options Menu" at the start
-        return [] + entries
-
-    def handle_search_options_entry(self, selection):
-        if selection == "Enter Search Options Menu":
-            
-            return True
-        return False
-    def browse_workspace(self):
-        root_paths = sorted({p.parent for p in self.state.workspace.list()})
-        while True:
-            root_dir = run_rofi([str(p) for p in root_paths], prompt="Select Root")
-            if not root_dir:
                 return
-            self._browse_tree(Path(root_dir[0]))
+            selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
+            self.state.clipboard.remove_files(selected)
+
+    def browse_workspace(self):
+        while True:
+            entries = sorted(str(p) for p in self.state.workspace.list())
+            choice = run_rofi(entries, prompt="Select Root")
+            if not choice:
+                return
+            self._browse_tree(choice[0])
 
     def _browse_tree(self, current_dir):
-        all_files = self.state.workspace.list()
-        tree = {}
-        for path in all_files:
-            if str(path).startswith(str(current_dir)):
-                rel = path.relative_to(current_dir)
-                parts = rel.parts
-                d = tree
-                for part in parts[:-1]:
-                    d = d.setdefault(part, {})
-                d[parts[-1]] = path
-
-        def walk(node, prefix=""):
-            entries = []
-            for k in sorted(node.keys()):
-                v = node[k]
-                if isinstance(v, dict):
-                    entries.append(f"{prefix}{k}/")
-                else:
-                    entries.append(f"{prefix}{k}")
-            return entries
-
-        current = tree
+        cur_path = Path(current_dir).resolve()
         stack = []
 
         while True:
-            entries = walk(current)
-            choice = run_rofi(entries, prompt=str(current_dir))
+            try:
+                entries = sorted(cur_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+            except Exception:
+                entries = []
+
+            display = [f"{e.name}/" if e.is_dir() else e.name for e in entries]
+            choice = run_rofi(display, prompt=str(cur_path))
             if not choice:
                 if stack:
-                    current, current_dir = stack.pop()
+                    cur_path = stack.pop()
                     continue
-                break
+                return
 
-            selected = choice[0]
-            selected_path = Path(selected.rstrip("/"))
-            if selected.endswith("/"):
-                stack.append((current, current_dir))
-                current = current[selected_path.name]
-                current_dir = current_dir / selected_path.name
+            name = choice[0].rstrip("/")
+            next_path = cur_path / name
+            if next_path.is_dir():
+                stack.append(cur_path)
+                cur_path = next_path
             else:
-                edit_files([str(current_dir / selected_path)])
+                edit_files([str(next_path)])
