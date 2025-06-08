@@ -1,5 +1,5 @@
 # workspace_utils.py
-from core.filters import matches_filters
+from filters.filtering import matches_filters
 from filesystem.tree_utils import expand_paths
 
 def get_filtered_workspace_paths(state):
