@@ -3,18 +3,20 @@ from pathlib import Path
 import json
 from workspace import Workspace
 from clipboard import Clipboard
+from search_config import SearchConfig
 class State:
     def __init__(self, workspace=None, clipboard=None, root_dir=None):
         self.current_mode = "Edit"
         self.use_gitignore = True
         self.include_dotfiles = False
-        self.directory_expansion = True
+        self.expansion_depth = None
         self.expansion_recursion = True
+        self.directory_expansion = True
         self.regex_mode = False
         self.regex_pattern = ""
-        # self.search_dirs_only = False
-        # self.search_files_only = True
         self.show_files = True
+        self.search_dirs_only = False
+        self.search_files_only = False
         self.show_dirs = True
         self.root_dir = root_dir
         self.clipboard_queue = []
@@ -23,23 +25,7 @@ class State:
         self.workspace_files = set()
         self.clipboard = clipboard or Clipboard()
         self.workspace = workspace or Workspace("workspace.json")
-
-    def init_workspace(self):
-        if self.input_set:
-            paths = [Path(p) for p in self.input_set]
-        elif self.root_dir:
-            paths = [Path(self.root_dir)]
-        else:
-            paths = [Path.cwd()]
-        self.workspace = Workspace(paths)
-        for base in paths:
-            base = Path(base)
-            if base.is_file():
-                self.workspace.files.add(base.resolve())
-            elif base.is_dir():
-                for p in base.rglob("*"):
-                    if p.is_file():
-                        self.workspace.files.add(p.resolve())
+        self.search_config = SearchConfig()
 
 
 
@@ -88,3 +74,17 @@ class State:
         clipboard = Clipboard()
         root_dir = data.get("root_dir")
         return cls(workspace=workspace, clipboard=clipboard, root_dir=root_dir)
+    def to_dict(self):
+        return {
+            "current_mode": self.current_mode,
+            "use_gitignore": self.use_gitignore,
+            "include_dotfiles": self.include_dotfiles,
+            "search_dirs_only": self.search_dirs_only,
+            "search_files_only": self.search_files_only,
+            "regex_mode": self.regex_mode,
+            "regex_pattern": self.regex_pattern,
+            "root_dir": self.root_dir,
+            "clipboard_queue": [str(p) for p in self.clipboard.snapshot()],
+            "input_set": self.input_set,
+            # Possibly serialize workspace files as list of str
+        }

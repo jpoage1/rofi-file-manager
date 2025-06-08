@@ -1,67 +1,55 @@
 # workspace.py
 import json
-import sys
 import fcntl
 from pathlib import Path
 
 class Workspace:
-    def __init__(self, source):
-        if isinstance(source, (str, Path)):
-            self.json_path = Path(source)
-            self.files = set()
-            self.paths = []
-            self.load()
-        elif isinstance(source, list):
-            self.json_path = None
-            self.paths = [Path(p) for p in source]
-            self.files = set(Path(p).resolve() for p in source if Path(p).exists())
-        else:
-            raise TypeError("Expected str, Path, or list of paths.")
+    def __init__(self, json_file=None, paths=[], cwd=None):
+        self.cwd = Path(cwd) if cwd else Path.cwd()
+        self.json_file = Path(json_file if json_file else "workspaces.json")
+        self.paths = set(Path(p) for p in paths if Path(p).exists())
+        self.load()
 
     def load(self):
-        if not self.json_path.exists():
-            self.paths = []
-            self.files = set()
-            return
-        with open(self.json_path, "r") as f:
+        with open(self.json_file, "r") as f:
             fcntl.flock(f, fcntl.LOCK_SH)
             data = json.load(f)
             fcntl.flock(f, fcntl.LOCK_UN)
-        self.paths = [Path(p) for p in data.get("paths", [])]
-        self.files = set(Path(f).resolve() for f in data.get("files", []))
+        self.paths.update(Path(p) for p in data.get("paths", []))
 
     def save(self):
-        if not self.json_path:
-            return  # Skip save if no persistence
-        data = {
-            "paths": [str(p) for p in self.paths],
-            "files": [str(f) for f in self.files],
-        }
-        tmp_path = self.json_path.with_suffix(".tmp")
+        tmp_path = self.json_file.with_suffix(".tmp")
         with open(tmp_path, "w") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
-            json.dump(data, f, indent=2)
+            json.dump({"paths": [str(p) for p in self.paths]}, f, indent=2)
             f.flush()
             fcntl.flock(f, fcntl.LOCK_UN)
-        tmp_path.rename(self.json_path)
+        tmp_path.rename(self.json_file)
 
-    def add(self, root_dir, entries):
-        root = Path(root_dir)
+    def add(self, entries, root_dir=None):
+        root = Path(root_dir) if root_dir else self.cwd
         for entry in entries:
             full_path = root / entry
             if full_path.exists():
-                self.files.add(full_path.resolve())
+                self.paths.add(full_path)
         self.save()
 
-    def remove(self, entries):
+    def remove(self, entries, root_dir=None):
+        root = Path(root_dir) if root_dir else self.cwd
         for entry in entries:
-            p = Path(entry) if not isinstance(entry, Path) else entry
-            self.files.discard(p.resolve())
+            full_path = (root / entry).resolve()
+            self.paths.discard(full_path)
         self.save()
 
     def list(self):
-        return sorted(self.files)
+        return sorted(self.paths)
+
+    def list_files(self):
+        return sorted(p for p in self.paths if p.is_file())
+
+    def list_directories(self):
+        return sorted(p for p in self.paths if p.is_dir())
 
     def reset(self):
-        self.files.clear()
-        self.save()
+        self.paths.clear()
+        self.save() 
