@@ -1,8 +1,8 @@
 # state.py
 from pathlib import Path
 import json
-from workspace import Workspace
-from clipboard import Clipboard
+from state.workspace import Workspace
+from clipboard.clipboard import Clipboard
 from search_config import SearchConfig
 class State:
     def __init__(self, workspace=None, clipboard=None, root_dir=None):

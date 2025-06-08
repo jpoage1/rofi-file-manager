@@ -1,11 +1,11 @@
 from pathlib import Path
-from rofi_interface import run_rofi
-from filesystem import list_files, list_directories
-from core import edit_files
-from search_options import SearchOptions
-from workspace_utils import get_filtered_workspace_paths
-from tree_utils import build_tree, flatten_tree
-from filters import get_entries
+from menu.rofi_interface import run_rofi
+from filesystem.filesystem import list_files, list_directories
+from core.core import edit_files
+from state.search_options import SearchOptions
+from state.workspace_utils import get_filtered_workspace_paths
+from filesystem.tree_utils import build_tree, flatten_tree
+from core.filters import get_entries
 
 
 class MenuManager:

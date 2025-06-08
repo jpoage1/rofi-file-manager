@@ -44,11 +44,14 @@ class Workspace:
     def list(self):
         return sorted(self.paths)
 
-    def list_files(self):
+    def list_workspace_files(self):
         return sorted(p for p in self.paths if p.is_file())
 
     def list_directories(self):
         return sorted(p for p in self.paths if p.is_dir())
+    
+    def expand_directories():
+        pass
 
     def reset(self):
         self.paths.clear()

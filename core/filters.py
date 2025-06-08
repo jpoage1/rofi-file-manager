@@ -1,7 +1,6 @@
 # filters.py
 import re
 from pathlib import Path
-import os
 import pathspec # Make sure this is installed: pip install pathspec
 
 # --- Helper functions ---
@@ -68,56 +67,97 @@ def is_ignored_by_stack(path: Path, active_gitignore_specs: list[tuple[pathspec.
     return False
 
 # --- Main functions with refactored gitignore logic ---
+def resolve_inode_key(path: Path):
+    try:
+        canonical_path = path.resolve()
+        stat_info = canonical_path.stat()
+        return canonical_path, (stat_info.st_dev, stat_info.st_ino)
+    except Exception:
+        return None, None
+
+def update_gitignore_specs(entry: Path, active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):
+    local_spec = load_gitignore_spec(entry)
+    if local_spec:
+        return active_gitignore_specs + [(local_spec, entry)]
+    return active_gitignore_specs
+
+def filter_ignored(entries: list[Path], use_gitignore: bool, gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):
+    if not use_gitignore:
+        return entries
+    return [e for e in entries if not is_ignored_by_stack(e, gitignore_specs)]
+
+def list_directory_children(entry: Path, include_dotfiles: bool):
+    try:
+        children = list(entry.iterdir())
+    except Exception:
+        children = []
+    if not include_dotfiles:
+        children = [c for c in children if not c.name.startswith(".")]
+    return children
+
 def expand_directories(entries: list[Path], state, current_depth: int,
                        active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]],
                        visited_inodes_for_current_traversal: set) -> list[Path]:
     expanded = []
 
     for entry in entries:
-        try:
-            canonical_path = entry.resolve()
-            stat_info = canonical_path.stat()
-            inode_key = (stat_info.st_dev, stat_info.st_ino)
-            if inode_key in visited_inodes_for_current_traversal:
-                continue
-            visited_inodes_for_current_traversal.add(inode_key)
-        except Exception:
-            pass
+        canonical_path, inode_key = resolve_inode_key(entry)
+        if not canonical_path or not inode_key:
+            continue
+        if inode_key in visited_inodes_for_current_traversal:
+            continue
+        visited_inodes_for_current_traversal.add(inode_key)
 
         if state.use_gitignore and is_ignored_by_stack(entry, active_gitignore_specs):
             continue
 
         expanded.append(entry)
 
-        if state.directory_expansion and entry.is_dir():
-            if state.expansion_depth is None or current_depth < state.expansion_depth:
-                new_active_gitignore_specs = list(active_gitignore_specs)
-                local_gitignore_spec = load_gitignore_spec(entry)
-                if local_gitignore_spec:
-                    new_active_gitignore_specs.append((local_gitignore_spec, entry))
+        if not (state.directory_expansion and entry.is_dir()):
+            continue
 
-                try:
-                    children = list(entry.iterdir())
-                except Exception:
-                    children = []
+        if state.expansion_depth is not None and current_depth >= state.expansion_depth:
+            continue
 
-                if not state.include_dotfiles:
-                    children = [c for c in children if not c.name.startswith(".")]
+        new_active_gitignore_specs = update_gitignore_specs(entry, active_gitignore_specs)
+        children = list_directory_children(entry, state.include_dotfiles)
 
-                if state.expansion_recursion:
-                    expanded.extend(expand_directories(
-                        children, state, current_depth + 1, new_active_gitignore_specs,
-                        visited_inodes_for_current_traversal
-                    ))
-                else:
-                    filtered_children = []
-                    for child in children:
-                        if state.use_gitignore and is_ignored_by_stack(child, new_active_gitignore_specs):
-                            continue
-                        filtered_children.append(child)
-                    expanded.extend(filtered_children)
+        if state.expansion_recursion:
+            expanded.extend(expand_directories(
+                children, state, current_depth + 1, new_active_gitignore_specs,
+                visited_inodes_for_current_traversal
+            ))
+        else:
+            filtered_children = filter_ignored(children, state.use_gitignore, new_active_gitignore_specs)
+            expanded.extend(filtered_children)
 
     return expanded
+
+def resolve_root_path(path):
+    try:
+        canonical_root = path.resolve()
+        stat_info = canonical_root.stat()
+        return canonical_root, (stat_info.st_dev, stat_info.st_ino)
+    except Exception:
+        return None, None
+
+def get_gitignore_specs(path, use_gitignore):
+    if not use_gitignore:
+        return []
+    root_spec = load_gitignore_spec(path)
+    return [(root_spec, path)] if root_spec else []
+
+def filter_entries(entries, state):
+    filtered = []
+    for e in entries:
+        if state.search_dirs_only and not e.is_dir():
+            continue
+        if state.search_files_only and not e.is_file():
+            continue
+        if not matches_filters(e, state):
+            continue
+        filtered.append(e)
+    return filtered
 
 def get_entries(state):
     all_expanded_entries = []
@@ -127,24 +167,17 @@ def get_entries(state):
         if not initial_path_root.exists():
             continue
 
-        try:
-            canonical_root = initial_path_root.resolve()
-            stat_info = canonical_root.stat()
-            root_key = (stat_info.st_dev, stat_info.st_ino)  # Use device + inode
-            if root_key in processed_root_inodes:
-                print(f"DEBUG: Skipping initial path as its canonical root was already processed: {initial_path_root}")
-                continue
-            processed_root_inodes.add(root_key)
-        except Exception:
+        canonical_root, root_key = resolve_root_path(initial_path_root)
+        if not canonical_root or not root_key:
             continue
+        if root_key in processed_root_inodes:
+            print(f"DEBUG: Skipping initial path as its canonical root was already processed: {initial_path_root}")
+            continue
+        processed_root_inodes.add(root_key)
 
-        initial_gitignore_specs = []
-        if state.use_gitignore:
-            root_spec = load_gitignore_spec(initial_path_root)
-            if root_spec:
-                initial_gitignore_specs.append((root_spec, initial_path_root))
+        initial_gitignore_specs = get_gitignore_specs(initial_path_root, state.use_gitignore)
 
-        visited_inodes_for_this_project = set()  # Start empty, do not pre-add root inode
+        visited_inodes_for_this_project = set()
 
         current_root_entries = [initial_path_root]
 
@@ -157,15 +190,7 @@ def get_entries(state):
         )
         all_expanded_entries.extend(expanded_for_this_root)
 
-    filtered = []
-    for e in all_expanded_entries:
-        if state.search_dirs_only and not e.is_dir():
-            continue
-        if state.search_files_only and not e.is_file():
-            continue
-        if not matches_filters(e, state):
-            continue
-        filtered.append(e)
+    filtered = filter_entries(all_expanded_entries, state)
 
     print(f"DEBUG: get_entries: Total filtered entries: {len(filtered)}")
     return filtered

@@ -26,7 +26,6 @@ list_git_files() {
     done
 }
 dirs=(
-    "$(which editor.sh)"
     "$0"
     $(
         list_git_files \

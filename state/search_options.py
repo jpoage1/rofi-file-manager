@@ -1,5 +1,5 @@
 # search_options.py
-from rofi_interface import run_rofi
+from menu.rofi_interface import run_rofi
 from pathlib import Path
 
 class SearchOptions:
