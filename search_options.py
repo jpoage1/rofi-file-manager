@@ -1,28 +1,19 @@
 # search_options.py
-
 from rofi_interface import run_rofi
+from pathlib import Path
 
 class SearchOptions:
     def __init__(self, state):
-        self.state = state
-
+        self.config = state.search_config
+        
     def run_menu(self):
-        options = [
-            f"Use .gitignore: {'ON' if self.state.use_gitignore else 'OFF'}",
-            f"Include dotfiles: {'ON' if self.state.include_dotfiles else 'OFF'}",
-            f"Directory expansion: {'ON' if self.state.directory_expansion else 'OFF'}",
-            f"Expansion recursion: {'ON' if self.state.expansion_recursion else 'OFF'}",
-            f"Regex mode: {'ON' if self.state.regex_mode else 'OFF'}",
-            f"Regex pattern: {self.state.regex_pattern or '<empty>'}",
-            "---",
-            "Reset to defaults",
-            "Exit"
-        ]
+        options = self._build_options()
         while True:
-            choice = run_rofi(options, "Search Options (toggle or edit pattern)", multi_select=False)
+            choice = run_rofi(options, "Search Options (toggle or edit)", multi_select=False)
             if not choice:
                 break
             choice = choice[0]
+
             if choice == "Exit":
                 break
             elif choice == "Reset to defaults":
@@ -31,39 +22,49 @@ class SearchOptions:
                 new_pattern = run_rofi([], "Enter regex pattern", multi_select=False)
                 if new_pattern is not None:
                     self.state.regex_pattern = new_pattern[0] if new_pattern else ""
-                    options[5] = f"Regex pattern: {self.state.regex_pattern or '<empty>'}"
+            elif choice.startswith("Expansion depth"):
+                new_depth = run_rofi([], "Enter max recursion depth (empty for unlimited)", multi_select=False)
+                if new_depth is not None:
+                    val = new_depth[0].strip()
+                    if val == "" or val.lower() in ("none", "unlimited"):
+                        self.state.expansion_depth = None
+                    else:
+                        try:
+                            depth_int = int(val)
+                            self.state.expansion_depth = max(0, depth_int)
+                        except ValueError:
+                            pass
             else:
                 self.toggle_option(choice)
-                # Refresh option display
-                options = [
-                    f"Use .gitignore: {'ON' if self.state.use_gitignore else 'OFF'}",
-                    f"Include dotfiles: {'ON' if self.state.include_dotfiles else 'OFF'}",
-                    f"Directory expansion: {'ON' if self.state.directory_expansion else 'OFF'}",
-                    f"Expansion recursion: {'ON' if self.state.expansion_recursion else 'OFF'}",
-                    f"Regex mode: {'ON' if self.state.regex_mode else 'OFF'}",
-                    f"Regex pattern: {self.state.regex_pattern or '<empty>'}",
-                    "---",
-                    "Reset to defaults",
-                    "Exit"
-                ]
+
+            options = self._build_options()
+
+
+    def _build_options(self):
+        return [
+            f"Use .gitignore: {'ON' if self.config.use_gitignore else 'OFF'}",
+            f"Include dotfiles: {'ON' if self.config.include_dotfiles else 'OFF'}",
+            f"Directory expansion: {'ON' if self.config.directory_expansion else 'OFF'}",
+            f"Expansion recursion: {'ON' if self.config.expansion_recursion else 'OFF'}",
+            f"Expansion depth: {self.config.expansion_depth if self.config.expansion_depth is not None else 'Unlimited'}",
+            f"Regex mode: {'ON' if self.config.regex_mode else 'OFF'}",
+            f"Regex pattern: {self.config.regex_pattern or '<empty>'}",
+            "---",
+            "Reset to defaults",
+            "Exit"
+        ]
 
     def toggle_option(self, option_label):
         if option_label.startswith("Use .gitignore"):
-            self.state.use_gitignore = not self.state.use_gitignore
+            self.config.use_gitignore = not self.config.use_gitignore
         elif option_label.startswith("Include dotfiles"):
-            self.state.include_dotfiles = not self.state.include_dotfiles
+            self.config.include_dotfiles = not self.config.include_dotfiles
         elif option_label.startswith("Directory expansion"):
-            self.state.directory_expansion = not self.state.directory_expansion
+            self.config.directory_expansion = not self.config.directory_expansion
         elif option_label.startswith("Expansion recursion"):
-            self.state.expansion_recursion = not self.state.expansion_recursion
+            self.config.expansion_recursion = not self.config.expansion_recursion
         elif option_label.startswith("Regex mode"):
-            self.state.regex_mode = not self.state.regex_mode
+            self.config.regex_mode = not self.config.regex_mode
 
     def reset_defaults(self):
-        self.state.use_gitignore = True
-        self.state.include_dotfiles = False
-        self.state.directory_expansion = True
-        self.state.expansion_recursion = True
-        self.state.regex_mode = False
-        self.state.regex_pattern = ""
-
+        self.config.reset_defaults()

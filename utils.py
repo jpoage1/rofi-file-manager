@@ -1,5 +1,9 @@
 import sys
 from pathlib import Path
+import os
+import re
+
+
 def get_input_paths():
     paths = []
     if len(sys.argv) > 1:
