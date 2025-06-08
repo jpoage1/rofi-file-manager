@@ -11,12 +11,14 @@ class Workspace:
         self.load()
 
     def load(self):
+        if not self.json_file.exists():
+            return
         with open(self.json_file, "r") as f:
             fcntl.flock(f, fcntl.LOCK_SH)
             data = json.load(f)
             fcntl.flock(f, fcntl.LOCK_UN)
         self.paths.update(Path(p) for p in data.get("paths", []))
-
+        
     def save(self):
         tmp_path = self.json_file.with_suffix(".tmp")
         with open(tmp_path, "w") as f:

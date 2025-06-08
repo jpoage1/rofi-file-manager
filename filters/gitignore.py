@@ -9,19 +9,51 @@ def load_gitignore_spec(directory_path: Path):
             lines = f.read().splitlines()
         return pathspec.PathSpec.from_lines('gitwildmatch', lines)
     return None
+def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
+    """
+    Checks if a given path is ignored by any of the gitignore specifications in the stack.
+    Each spec in the stack is a tuple (PathSpec object, base_directory_Path object).
+    """
+    
+    # Use canonical_path for consistent matching
+    canonical_path = path.resolve() 
+    print(f"[DEBUG] is_ignored_by_stack: Checking CANONICAL '{canonical_path}' against {len(gitignore_specs)} specs.")
 
-def is_ignored_by_stack(path: Path, active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):
-    if not active_gitignore_specs:
-        return False
-    for spec, base_path in reversed(active_gitignore_specs):
-        if spec is None:
-            continue
+    for spec_obj, base_path in gitignore_specs:
         try:
-            rel_path = path.relative_to(base_path)
-            if spec.match_file(str(rel_path)):
+            # Calculate the path relative to the base_path of this specific gitignore spec
+            rel_path = canonical_path.relative_to(base_path)
+            rel_path_str = str(rel_path)
+
+            # Git's .gitignore matching treats directories specially:
+            # A pattern 'foo/' matches 'foo' (if it's a directory) and 'foo/bar'.
+            # pathspec's gitwildmatch should handle this automatically.
+            # However, for explicit debugging, let's see what it does.
+            
+            # Match as is
+            matched_as_is = spec_obj.match_file(rel_path_str)
+            print(f"[DEBUG] is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}': Matched={matched_as_is}")
+            if matched_as_is:
                 return True
+
+            # If it's a directory, also try matching with a trailing slash, just in case
+            # (pathspec usually does this internally for patterns ending with /)
+            if canonical_path.is_dir() and not rel_path_str.endswith('/'):
+                matched_with_slash = spec_obj.match_file(rel_path_str + '/')
+                print(f"[DEBUG] is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}/': Matched={matched_with_slash} (as directory)")
+                if matched_with_slash:
+                    return True
+
         except ValueError:
+            # This path is not a child of this base_path, so this spec doesn't apply to it.
+            # This is expected in multi-repo scenarios where paths aren't hierarchical to all specs.
+            print(f"[DEBUG] is_ignored_by_stack:   - '{canonical_path}' not relative to spec base '{base_path}', skipping this spec.")
             continue
+        except Exception as e:
+            print(f"[ERROR] is_ignored_by_stack: An unexpected error occurred: {e}")
+            continue
+
+    print(f"[DEBUG] is_ignored_by_stack: '{canonical_path}' NOT ignored by any active specs.") # NEW
     return False
 
 def update_gitignore_specs(entry: Path, active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):

@@ -5,4 +5,4 @@ dirs=("$0" "${projects[@]}")
 
 source /srv/projects/editor-menu/editor.sh
 # echo "${dirs[@]}"
-run "${dirs[@]}"
+run --cwd=/srv/projects --workspace-file=workspace.json -- "${dirs[@]}"

@@ -9,10 +9,20 @@ run() {
 
 # echo "${dirs[@]}"
 
+workspace_editor() {
+    cd "$root_dir"
+    readarray -t project < <(
+        git ls-tree -r --name-only HEAD |
+            xargs -I{} dirname "{}" |
+            sort -u
+    )
+    dirs=("$0" "${project[@]}")
+    run --cwd="$root_dir" --workspace-file=workspace.json -- "${dirs[@]}"
+}
+
 # Detect if script is sourced or executed
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then # Script is not sourced
-    cd "$root_dir"
-    readarray -t projects < <(git ls-files)
-    dirs=("$0" "${projects[@]}")
-    run "${dirs[@]}"
+    workspace_editor
 fi
+# Prevent workspace_editor from getting sourced
+unset -f workspace_editor
