@@ -5,7 +5,7 @@ from core.core import edit_files
 from state.search_options import SearchOptions
 from state.workspace_utils import get_filtered_workspace_paths
 from filesystem.tree_utils import build_tree, flatten_tree
-from core.filters import get_entries
+from filters.main import get_entries
 
 
 class MenuManager:
@@ -126,7 +126,11 @@ class MenuManager:
             choice = run_rofi(entries, prompt="Select Root")
             if not choice:
                 return
-            self._browse_tree(choice[0])
+            selected_path = Path(choice[0])
+            if selected_path.is_file():
+                edit_files([selected_path])
+            else:
+                self._browse_tree(choice[0])
 
     def _browse_tree(self, current_dir):
         cur_path = Path(current_dir).resolve()
@@ -148,8 +152,9 @@ class MenuManager:
 
             name = choice[0].rstrip("/")
             next_path = cur_path / name
+            print(next_path)
             if next_path.is_dir():
                 stack.append(cur_path)
                 cur_path = next_path
             else:
-                edit_files([str(next_path)])
+                edit_files([next_path])
