@@ -1,0 +1,16 @@
+{
+  "user_paths": [],
+  "ignored_paths": [],
+  "generator_blacklist_patterns": [],
+  "state_config": {
+    "use_gitignore": true,
+    "include_dotfiles": false,
+    "search_dirs_only": false,
+    "search_files_only": false,
+    "regex_mode": false,
+    "regex_pattern": "",
+    "root_dir": null,
+    "clipboard_queue": [],
+    "auto_save_enabled": false
+  }
+}
