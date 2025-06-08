@@ -23,6 +23,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Manage workspace state")
     parser.add_argument("--workspace-file", default="workspace.json")
     parser.add_argument("--cwd", default=None)
+    parser.add_argument("--interface", default=None)
     parser.add_argument("paths", nargs="*")
     return parser.parse_args()
 
@@ -33,6 +34,6 @@ if __name__ == "__main__":
         paths=args.paths,
         cwd=args.cwd
     )
-    state = State(workspace)
+    state = State(workspace, interface=args.interface)
     workspace.setState(state)
     main(state)

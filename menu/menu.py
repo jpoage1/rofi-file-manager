@@ -1,20 +1,10 @@
 from pathlib import Path
-from menu.rofi_interface import run_rofi
 from filesystem.filesystem import list_files, list_directories
 from core.core import edit_files
 from state.search_options import SearchOptions
 from state.workspace_utils import get_filtered_workspace_paths
 from filesystem.tree_utils import build_tree, flatten_tree
 from filters.main import get_entries
-
-from pathlib import Path
-from menu.rofi_interface import run_rofi # Assuming this is your Rofi wrapper
-from filesystem.filesystem import list_files, list_directories
-from core.core import edit_files
-from state.search_options import SearchOptions
-from state.workspace_utils import get_filtered_workspace_paths # Potentially remove if not used directly by MenuManager
-from filesystem.tree_utils import build_tree, flatten_tree
-from filters.main import get_entries # Assuming this is where your filtering logic lives
 
 import re
 
@@ -98,7 +88,7 @@ class MenuManager:
 
             # print(f"current_menu_dict {type(current_menu_dict)}")
             
-            choice = run_rofi(list(current_menu_dict.keys()), prompt="Select an option")
+            choice = self.state.run_selector(list(current_menu_dict.keys()), prompt="Select an option")
             if not choice:
                 return # User cancelled, return to parent menu or exit
 
@@ -131,7 +121,7 @@ class MenuManager:
         choices = flatten_tree(tree)
 
         while True:
-            selection = run_rofi(choices, prompt="Workspace Files")
+            selection = self.state.run_selector(choices, prompt="Workspace Files")
             if not selection:
                 return
             edit_files([Path(s) for s in selection])
@@ -149,7 +139,7 @@ class MenuManager:
         while True:
             root_dir = self.get_root_dir()
             dirs = list_directories(root_dir)
-            selection = run_rofi([str(d) for d in dirs], prompt="Select Directory")
+            selection = self.state.run_selector([str(d) for d in dirs], prompt="Select Directory")
             if not selection:
                 return
             self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
@@ -158,7 +148,7 @@ class MenuManager:
         while True:
             root_dir = self.get_root_dir()
             entries = list_files(root_dir)
-            selection = run_rofi([str(e) for e in entries], prompt="Select Files to Add", multi_select=True)
+            selection = self.state.run_selector([str(e) for e in entries], prompt="Select Files to Add", multi_select=True)
             if not selection:
                 return
             selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
@@ -167,7 +157,7 @@ class MenuManager:
     def remove_files(self):
         while True:
             entries = self.state.workspace.list()
-            selection = run_rofi([str(p) for p in entries], prompt="Select Files to Remove", multi_select=True)
+            selection = self.state.run_selector([str(p) for p in entries], prompt="Select Files to Remove", multi_select=True)
             if not selection:
                 return
             selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
@@ -176,7 +166,7 @@ class MenuManager:
     def add_workspace_to_clipboard(self):
         while True:
             entries = self.state.workspace.list()
-            selection = run_rofi([str(p) for p in entries], prompt="Select Workspace Paths", multi_select=True)
+            selection = self.state.run_selector([str(p) for p in entries], prompt="Select Workspace Paths", multi_select=True)
             if not selection:
                 return
             selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
@@ -186,7 +176,7 @@ class MenuManager:
         while True:
             root_dir = self.get_root_dir()
             entries = list_files(root_dir)
-            selection = run_rofi([str(e) for e in entries], prompt="Select CWD Files", multi_select=True)
+            selection = self.state.run_selector([str(e) for e in entries], prompt="Select CWD Files", multi_select=True)
             if not selection:
                 return
             selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
@@ -195,7 +185,7 @@ class MenuManager:
     def remove_from_clipboard(self):
         while True:
             entries = self.state.clipboard.get_files()
-            selection = run_rofi([str(p) for p in entries], prompt="Select Clipboard Paths to Remove", multi_select=True)
+            selection = self.state.run_selector([str(p) for p in entries], prompt="Select Clipboard Paths to Remove", multi_select=True)
             if not selection:
                 return
             selected = [entries[[str(e) for e in entries].index(s)] for s in selection]
@@ -204,7 +194,7 @@ class MenuManager:
     def browse_workspace(self):
         while True:
             entries = sorted(str(p) for p in self.state.workspace.list())
-            choice = run_rofi(entries, prompt="Select Root")
+            choice = self.state.run_selector(entries, prompt="Select Root")
             if not choice:
                 return
             selected_path = Path(choice[0])
@@ -224,7 +214,7 @@ class MenuManager:
                 entries = []
 
             display = [f"{e.name}/" if e.is_dir() else e.name for e in entries]
-            choice = run_rofi(display, prompt=str(cur_path))
+            choice = self.state.run_selector(display, prompt=str(cur_path))
             if not choice:
                 if stack:
                     cur_path = stack.pop()
@@ -252,14 +242,14 @@ class MenuManager:
     def _view_blacklist_patterns(self):
         patterns = self.state.workspace.get_generator_blacklist_patterns()
         if not patterns:
-            run_rofi(["No blacklist patterns configured."], prompt="Generator Blacklist (Read-Only)")
+            self.state.run_selector(["No blacklist patterns configured."], prompt="Generator Blacklist (Read-Only)")
             return
         display_patterns = [f"{i+1}. {p}" for i, p in enumerate(patterns)]
-        run_rofi(display_patterns, prompt="Generator Blacklist (Read-Only)")
+        self.state.run_selector(display_patterns, prompt="Generator Blacklist (Read-Only)")
 
     def _add_blacklist_pattern(self):
         prompt_text = "Enter new regex pattern (e.g., .*/__pycache__.*)"
-        new_pattern_result = run_rofi([], prompt=prompt_text)
+        new_pattern_result = self.state.run_selector([], prompt=prompt_text)
         
         if not new_pattern_result or not new_pattern_result[0]:
             print("[DEBUG] No new pattern entered.")
@@ -267,30 +257,30 @@ class MenuManager:
         
         new_pattern = new_pattern_result[0].strip()
         if not new_pattern:
-            run_rofi(["Pattern cannot be empty."], prompt="Error")
+            self.state.run_selector(["Pattern cannot be empty."], prompt="Error")
             return
 
         try:
             re.compile(new_pattern)
         except re.error as e:
-            run_rofi([f"Invalid Regex: {e}"], prompt="Error")
+            self.state.run_selector([f"Invalid Regex: {e}"], prompt="Error")
             print(f"[ERROR] Invalid regex pattern entered: '{new_pattern}' - {e}")
             return
 
         self.state.workspace.add_generator_blacklist_pattern(new_pattern)
         # Manually set dirty flag for now.
         self.state.is_dirty = True
-        run_rofi([f"Pattern '{new_pattern}' added. Status updated."], prompt="Success")
+        self.state.run_selector([f"Pattern '{new_pattern}' added. Status updated."], prompt="Success")
 
 
     def _remove_blacklist_pattern(self):
         patterns = self.state.workspace.get_generator_blacklist_patterns()
         if not patterns:
-            run_rofi(["No blacklist patterns to remove."], prompt="Generator Blacklist")
+            self.state.run_selector(["No blacklist patterns to remove."], prompt="Generator Blacklist")
             return
         
         display_patterns = [f"{i+1}. {p}" for i, p in enumerate(patterns)]
-        selection_list = run_rofi(display_patterns, prompt="Select pattern(s) to remove", multi_select=True)
+        selection_list = self.state.run_selector(display_patterns, prompt="Select pattern(s) to remove", multi_select=True)
         if not selection_list:
             print("[DEBUG] No pattern selected for removal.")
             return
@@ -312,21 +302,21 @@ class MenuManager:
         if removed_any:
             # Manually set dirty flag for now.
             self.state.is_dirty = True
-            run_rofi([f"Removed pattern(s). Status updated."], prompt="Success")
+            self.state.run_selector([f"Removed pattern(s). Status updated."], prompt="Success")
         else:
-            run_rofi(["No patterns removed."], prompt="Info")
+            self.state.run_selector(["No patterns removed."], prompt="Info")
 
     def reset_workspace(self):
         confirm_options = ["Yes, reset it", "No, keep it"]
-        confirmation = run_rofi(confirm_options, prompt="Are you sure you want to reset workspace? This will clear all user-added paths and custom ignored paths.")
+        confirmation = self.state.run_selector(confirm_options, prompt="Are you sure you want to reset workspace? This will clear all user-added paths and custom ignored paths.")
         if confirmation and confirmation[0] == "Yes, reset it":
             self.state.workspace.reset()
             # Manually set dirty flag for now.
             self.state.is_dirty = True
-            run_rofi(["Workspace reset to generated defaults. Status updated."], prompt="Success")
+            self.state.run_selector(["Workspace reset to generated defaults. Status updated."], prompt="Success")
             print("[INFO] Workspace reset performed.")
         else:
-            run_rofi(["Workspace reset cancelled."], prompt="Cancelled")
+            self.state.run_selector(["Workspace reset cancelled."], prompt="Cancelled")
             print("[INFO] Workspace reset cancelled by user.")
 
     # --- UPDATED Save Workspace Method ---
@@ -335,46 +325,46 @@ class MenuManager:
         current_path = self.state.workspace.get_current_json_file_path()
 
         if self.state.auto_save_enabled:
-            run_rofi([f"Auto-Save is ON. Workspace is automatically saved to {current_path}."], prompt="Auto-Save Status")
+            self.state.run_selector([f"Auto-Save is ON. Workspace is automatically saved to {current_path}."], prompt="Auto-Save Status")
         elif self.state.is_dirty:
             confirm_options = [f"Yes, save to {current_path}", "No, cancel"]
-            confirmation = run_rofi(confirm_options, prompt="Confirm Save")
+            confirmation = self.state.run_selector(confirm_options, prompt="Confirm Save")
             if confirmation and confirmation[0].startswith("Yes"):
                 self.state.workspace.save()
                 self.state.is_dirty = False # Clear dirty flag after explicit save
-                run_rofi([f"Workspace saved to {current_path}"], prompt="Success")
+                self.state.run_selector([f"Workspace saved to {current_path}"], prompt="Success")
             else:
-                run_rofi(["Save cancelled."], prompt="Cancelled")
+                self.state.run_selector(["Save cancelled."], prompt="Cancelled")
         else: # No unsaved changes and auto-save is off
-            run_rofi([f"Workspace is currently saved to {current_path} (No unsaved changes)."], prompt="Save Status")
+            self.state.run_selector([f"Workspace is currently saved to {current_path} (No unsaved changes)."], prompt="Save Status")
 
     def save_workspace_as(self):
         """Prompts user for a new path and saves the workspace there."""
         current_path = self.state.workspace.get_current_json_file_path()
         prompt_text = f"Enter new workspace file path (Current: {current_path})"
         
-        new_path_result = run_rofi([], prompt=prompt_text)
+        new_path_result = self.state.run_selector([], prompt=prompt_text)
         
         if not new_path_result or not new_path_result[0]:
-            run_rofi(["No path entered. Save cancelled."], prompt="Cancelled")
+            self.state.run_selector(["No path entered. Save cancelled."], prompt="Cancelled")
             return
         
         new_path_str = new_path_result[0].strip()
         if not new_path_str:
-            run_rofi(["Empty path entered. Save cancelled."], prompt="Cancelled")
+            self.state.run_selector(["Empty path entered. Save cancelled."], prompt="Cancelled")
             return
 
         new_path = Path(new_path_str).resolve()
 
         self.state.workspace.save(new_path)
         self.state.is_dirty = False # Clear dirty flag after explicit save as
-        run_rofi([f"Workspace saved to new path: {new_path}"], prompt="Success")
+        self.state.run_selector([f"Workspace saved to new path: {new_path}"], prompt="Success")
         print(f"[INFO] Workspace file path changed to: {new_path}")
 
     # --- NEW Toggle Auto-Save Method ---
     def toggle_auto_save(self):
         self.state.auto_save_enabled = not self.state.auto_save_enabled
         status = "On" if self.state.auto_save_enabled else "Off"
-        # run_rofi([f"Auto-Save turned {status}."], prompt="Auto-Save Status")
+        # self.state.run_selector([f"Auto-Save turned {status}."], prompt="Auto-Save Status")
         print(f"[INFO] Auto-Save toggled to: {status}")
         # Note: We are not auto-saving here yet. That will be the next step.
