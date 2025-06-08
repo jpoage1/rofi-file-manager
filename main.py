@@ -10,6 +10,11 @@ from pathlib import Path
 from state.workspace import Workspace
 
 def main(state):
+    # Initial auto-save check happens after workspace.setState(state)
+    # This also handles the case where auto-save was ON from a previous session AND we are dirty.
+    if state.is_dirty and state.auto_save_enabled:
+        print("[INFO] Performing initial auto-save due to dirty state and auto-save being enabled.")
+        state.autoSave(state.workspace.save) # This will save and clear is_dirty
     menu_manager = MenuManager(state)
     menu_manager.main_loop()
 
