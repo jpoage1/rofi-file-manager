@@ -1,35 +1,38 @@
+# In filters/filtering.py
 import re
 from pathlib import Path
-from filters.gitignore import is_ignored_by_stack
+from filters.gitignore import is_ignored_by_stack # Make sure this import is here
 
 def matches_filters(path: Path, state) -> bool:
-    if not state.include_dotfiles and any(p.startswith('.') for p in path.parts if p not in ('.', '..')):
-        return False
-    pattern = getattr(state, '_compiled_regex', None)
-    if state.regex_mode and state.regex_pattern:
-        if pattern is None:
-            try:
-                pattern = re.compile(state.regex_pattern)
-            except re.error:
-                return True
-            state._compiled_regex = pattern
-        if not pattern.search(str(path)):
-            return False
-    return True
+    # ... (no change needed here for now)
+    pass
 
 def filter_ignored(entries: list[Path], use_gitignore: bool, gitignore_specs: list[tuple]) -> list[Path]:
+    print(f"[DEBUG] filter_ignored: Called with {len(entries)} entries.") # NEW
     if not use_gitignore:
+        print(f"[DEBUG] filter_ignored: Skipping .gitignore filtering (disabled).")
         return entries
-    return [e for e in entries if not is_ignored_by_stack(e, gitignore_specs)]
+    result = []
+    for e in entries:
+        ignored = is_ignored_by_stack(e, gitignore_specs)
+        if not ignored:
+            result.append(e)
+            print(f"[DEBUG] filter_ignored: KEPT '{e}'") # More precise
+        else:
+            print(f"[DEBUG] filter_ignored: IGNORED '{e}'") # More precise
+    print(f"[DEBUG] filter_ignored: Returning {len(result)} entries.") # NEW
+    return result
 
 def filter_entries(entries: list[Path], state) -> list[Path]:
+    print(f"[DEBUG] filter_entries: Called with {len(entries)} entries.") # NEW
     filtered = []
     for e in entries:
-        if state.search_dirs_only and not e.is_dir():
-            continue
-        if state.search_files_only and not e.is_file():
-            continue
-        if not matches_filters(e, state):
-            continue
+        # ... (your existing filtering logic)
+        # Assuming you've already made this change:
+        # if not matches_filters(e, state):
+        #     print(f"[DEBUG] Filtered out by other rules: {e}")
+        #     continue
         filtered.append(e)
+        print(f"[DEBUG] filter_entries: INCLUDED (final list) '{e}'") # Most precise
+    print(f"[DEBUG] filter_entries: Returning {len(filtered)} entries.") # NEW
     return filtered

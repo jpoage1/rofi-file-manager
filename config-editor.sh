@@ -41,18 +41,39 @@ dirs=(
             "$HOME/.vim"
     )
 )
+dirs=(
+    "$0"
+
+    "$HOME/.config/i3"
+    "$HOME/.config/home-manager"
+    "/nix-config"
+    "$HOME/.config/tmux"
+    "$HOME/.config/fish"
+    "$HOME/.config/zsh"
+    "$HOME/.config/bash"
+    "$HOME/.config/posix"
+    "$HOME/.config/polybar"
+    "$HOME/.vim"
+)
+dirs=(
+    "$0"
+    "/nix-config"
+    "$HOME"/.config/{i3,home-manager,tmux,fish,zsh,bash,posix,polybar}
+    "$HOME/.vim"
+)
+# echo "${dirs[@]}"
 # dirs=($(list_git_files "$HOME/.config/i3" "$HOME/.config/home-manager" "/nix-config" \
 #     "$HOME/.config/tmux" "$HOME/.config/fish" "$HOME/.config/zsh" \
 #     "$HOME/.config/bash" "$HOME/.config/posix" "$HOME/.config/polybar" "$HOME/.vim"))
 
 # echo "${dirs[@]}"
-# exit
-filtered_dirs=()
-for path in "${dirs[@]}"; do
-    [[ -d "$path" ]] && continue
-    filtered_dirs+=("$path")
-done
-dirs=("${filtered_dirs[@]}")
+# # exit
+# filtered_dirs=()
+# for path in "${dirs[@]}"; do
+#     [[ -d "$path" ]] && continue
+#     filtered_dirs+=("$path")
+# done
+# dirs=("${filtered_dirs[@]}")
 # printf "%s\n" "${dirs[@]}" | grep "$1"
 source /srv/projects/editor-menu/editor.sh
-run "${dirs[@]}"
+run --cwd="$HOME" --workspace-file=".config/workspace.json" -- "${dirs[@]}"
