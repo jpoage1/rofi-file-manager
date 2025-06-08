@@ -1,5 +1,5 @@
-from rofi_interface import run_rofi
-from filesystem import list_directories
+from menu.rofi_interface import run_rofi
+from filesystem.filesystem import list_directories
 from pathlib import Path
 
 def traverse_directory(state):
