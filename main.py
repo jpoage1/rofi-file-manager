@@ -2,11 +2,11 @@
 # main.py
 
 
-from utils import get_input_paths
-from menu import MenuManager
-from state import State
+from utils.utils import get_input_paths
+from menu.menu import MenuManager
+from state.state import State
 from pathlib import Path
-from workspace import Workspace
+from state.workspace import Workspace
 
 def main(state):
     menu_manager = MenuManager(state)
