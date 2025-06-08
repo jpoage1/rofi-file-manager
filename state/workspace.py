@@ -161,14 +161,14 @@ class Workspace:
             full_path = root / entry
             if full_path.exists():
                 self.paths.add(full_path)
-        self.save()
+        self.autoSave()
 
     def remove(self, entries, root_dir=None):
         root = Path(root_dir) if root_dir else self.cwd
         for entry in entries:
             full_path = (root / entry).resolve()
             self.paths.discard(full_path)
-        self.save()
+        self.autoSave()
 
     def list(self):
         return sorted(self.paths)
@@ -184,7 +184,18 @@ class Workspace:
 
     def reset(self):
         self.paths.clear()
-        self.save() 
+        self.autoSave()
 
     def get_current_json_file_path(self):
         return self.json_file
+
+    def setState(self, state):
+        self.state = state
+    
+    def autoSave(self):
+        if hasattr(self, 'state') and self.state is not None:
+            return self.state.autoSave(self.save)
+        else:
+            print("[ERROR] Workspace's state object is not set. Cannot auto-save.")
+            # Optionally, you could raise an error or save unconditionally here
+            # self.save() # If you want to save even if auto-save state isn't correctly linked
