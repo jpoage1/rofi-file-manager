@@ -1,7 +1,7 @@
 # rofi_interface.py
 import subprocess
 
-def run_rofi(entries, prompt, multi_select=False):
+def run_rofi(entries, prompt, multi_select=False, text_input=True):
     cmd = ["rofi", "-dmenu", "-p", prompt]
     if multi_select:
         cmd.append("-multi-select")

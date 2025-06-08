@@ -26,8 +26,8 @@ class State:
         self.clipboard = clipboard or Clipboard()
         self.workspace = workspace or Workspace("workspace.json")
         self.search_config = SearchConfig()
-
-
+        self.is_dirty: bool = False # True if there are unsaved changes
+        self.auto_save_enabled: bool = False # Controls if changes are auto-saveds
 
     def push_state(self):
         snapshot = {
@@ -55,6 +55,7 @@ class State:
             self.regex_pattern = snapshot["regex_pattern"]
             self.root_dir = snapshot["root_dir"]
             self.clipboard.restore(snapshot["clipboard_queue"])
+
     def save_to_file(self, path):
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
@@ -73,7 +74,16 @@ class State:
         workspace = Workspace("workspace.json")
         clipboard = Clipboard()
         root_dir = data.get("root_dir")
-        return cls(workspace=workspace, clipboard=clipboard, root_dir=root_dir)
+        
+        # Create state instance
+        state = cls(workspace=workspace, clipboard=clipboard, root_dir=root_dir)
+        
+        # Restore auto_save_enabled from saved state, default to False
+        state.auto_save_enabled = data.get("auto_save_enabled", False)
+        state.is_dirty = False # Always start clean on load
+
+        return state
+
     def to_dict(self):
         return {
             "current_mode": self.current_mode,
@@ -83,8 +93,11 @@ class State:
             "search_files_only": self.search_files_only,
             "regex_mode": self.regex_mode,
             "regex_pattern": self.regex_pattern,
-            "root_dir": self.root_dir,
+            "root_dir": str(self.root_dir) if self.root_dir else None,
             "clipboard_queue": [str(p) for p in self.clipboard.snapshot()],
             "input_set": self.input_set,
-            # Possibly serialize workspace files as list of str
+            # --- NEW: Persist auto_save_enabled ---
+            "auto_save_enabled": self.auto_save_enabled,
+            # --- END NEW ---
+            # is_dirty should NOT be persisted as it's a runtime flag
         }
