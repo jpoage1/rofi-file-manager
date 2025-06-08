@@ -4,7 +4,7 @@ import json
 from state.workspace import Workspace
 from clipboard.clipboard import Clipboard
 from search_config import SearchConfig
-from menu.rofi_interface import run_selector
+import logging
 class State:
     def __init__(self, workspace=None, clipboard=None, root_dir=None, interface=None):
         self.use_gitignore = True
@@ -107,7 +107,7 @@ class State:
     def autoSave(self, save_callable):
         """Conditionally calls the provided save_callable and clears the dirty flag."""
         if self.auto_save_enabled:
-            print("[DEBUG] Auto-save triggered.")
+            logging.debug("Auto-save triggered.")
             save_callable() # This will call workspace.save(), which clears is_dirty
 
     def get_persistable_config(self) -> dict:
@@ -143,7 +143,4 @@ class State:
         self.clipboard.restore([Path(p) for p in loaded_clipboard_queue])
         
         self.auto_save_enabled = config_dict.get("auto_save_enabled", False) # Default to False
-        print(f"[DEBUG] Applied State config from JSON: auto_save_enabled={self.auto_save_enabled}")
-
-    def run_selector(self, entries, prompt, multi_select=False, text_input=True):
-        return run_selector(self.interface, entries, prompt, multi_select, text_input)
+        logging.debug(f"Applied State config from JSON: auto_save_enabled={self.auto_save_enabled}")
