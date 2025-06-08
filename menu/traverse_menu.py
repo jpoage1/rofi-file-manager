@@ -1,4 +1,4 @@
-from menu.rofi_interface import run_rofi
+
 from filesystem.filesystem import list_directories
 from pathlib import Path
 
@@ -7,7 +7,7 @@ def traverse_directory(state):
     dirs = list_directories(current_dir)
     if not dirs:
         return
-    choice = run_rofi(dirs, prompt="Traverse to directory", multi_select=False)
+    choice = state.run_selector(dirs, prompt="Traverse to directory", multi_select=False)
     if not choice:
         return
     selected_path = Path(current_dir) / choice[0]

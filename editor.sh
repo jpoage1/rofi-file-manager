@@ -17,7 +17,7 @@ workspace_editor() {
             sort -u
     )
     dirs=("$0" "${project[@]}")
-    run --cwd="$root_dir" --workspace-file=workspace.json -- "${dirs[@]}"
+    run --cwd="$root_dir" --interface=fzf --workspace-file=workspace.json -- "${dirs[@]}"
 }
 
 # Detect if script is sourced or executed

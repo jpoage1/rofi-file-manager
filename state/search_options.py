@@ -1,5 +1,4 @@
 # search_options.py
-from menu.rofi_interface import run_rofi
 from pathlib import Path
 
 class SearchOptions:
@@ -9,7 +8,7 @@ class SearchOptions:
     def run_menu(self):
         options = self._build_options()
         while True:
-            choice = run_rofi(options, "Search Options (toggle or edit)", multi_select=False)
+            choice = self.config.run_selector(options, "Search Options (toggle or edit)", multi_select=False)
             if not choice:
                 break
             choice = choice[0]
@@ -19,11 +18,11 @@ class SearchOptions:
             elif choice == "Reset to defaults":
                 self.reset_defaults()
             elif choice.startswith("Regex pattern"):
-                new_pattern = run_rofi([], "Enter regex pattern", multi_select=False)
+                new_pattern = self.config.run_selector([], "Enter regex pattern", multi_select=False)
                 if new_pattern is not None:
                     self.state.regex_pattern = new_pattern[0] if new_pattern else ""
             elif choice.startswith("Expansion depth"):
-                new_depth = run_rofi([], "Enter max recursion depth (empty for unlimited)", multi_select=False)
+                new_depth = self.config.run_selector([], "Enter max recursion depth (empty for unlimited)", multi_select=False)
                 if new_depth is not None:
                     val = new_depth[0].strip()
                     if val == "" or val.lower() in ("none", "unlimited"):

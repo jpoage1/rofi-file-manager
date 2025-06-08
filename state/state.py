@@ -4,8 +4,9 @@ import json
 from state.workspace import Workspace
 from clipboard.clipboard import Clipboard
 from search_config import SearchConfig
+from menu.rofi_interface import run_selector
 class State:
-    def __init__(self, workspace=None, clipboard=None, root_dir=None):
+    def __init__(self, workspace=None, clipboard=None, root_dir=None, interface=None):
         self.use_gitignore = True
         self.include_dotfiles = False
         self.expansion_depth = None
@@ -27,6 +28,7 @@ class State:
         self.search_config = SearchConfig()
         self.is_dirty: bool = False # True if there are unsaved changes
         self.auto_save_enabled: bool = False # Controls if changes are auto-saveds
+        self.interface = interface or "rofi"
 
     def push_state(self):
         snapshot = {
@@ -142,3 +144,6 @@ class State:
         
         self.auto_save_enabled = config_dict.get("auto_save_enabled", False) # Default to False
         print(f"[DEBUG] Applied State config from JSON: auto_save_enabled={self.auto_save_enabled}")
+
+    def run_selector(self, entries, prompt, multi_select=False, text_input=True):
+        return run_selector(self.interface, entries, prompt, multi_select, text_input)

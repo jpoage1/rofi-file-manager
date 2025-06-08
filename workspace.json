@@ -1,5 +1,15 @@
 {
-  "user_paths": [],
+  "user_paths": [
+    "/srv/projects/editor-menu",
+    "/srv/projects/editor-menu/clipboard",
+    "/srv/projects/editor-menu/core",
+    "/srv/projects/editor-menu/editor.sh",
+    "/srv/projects/editor-menu/filesystem",
+    "/srv/projects/editor-menu/filters",
+    "/srv/projects/editor-menu/menu",
+    "/srv/projects/editor-menu/state",
+    "/srv/projects/editor-menu/utils"
+  ],
   "ignored_paths": [],
   "generator_blacklist_patterns": [],
   "state_config": {
