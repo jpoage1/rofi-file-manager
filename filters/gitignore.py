@@ -1,6 +1,7 @@
 # gitignore.py
 import pathspec
 from pathlib import Path
+import logging
 
 def load_gitignore_spec(directory_path: Path):
     gitignore_path = directory_path / '.gitignore'
@@ -17,7 +18,7 @@ def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
     
     # Use canonical_path for consistent matching
     canonical_path = path.resolve() 
-    print(f"[DEBUG] is_ignored_by_stack: Checking CANONICAL '{canonical_path}' against {len(gitignore_specs)} specs.")
+    logging.debug(f"is_ignored_by_stack: Checking CANONICAL '{canonical_path}' against {len(gitignore_specs)} specs.")
 
     for spec_obj, base_path in gitignore_specs:
         try:
@@ -32,7 +33,7 @@ def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
             
             # Match as is
             matched_as_is = spec_obj.match_file(rel_path_str)
-            print(f"[DEBUG] is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}': Matched={matched_as_is}")
+            logging.debug(f"is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}': Matched={matched_as_is}")
             if matched_as_is:
                 return True
 
@@ -40,20 +41,20 @@ def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
             # (pathspec usually does this internally for patterns ending with /)
             if canonical_path.is_dir() and not rel_path_str.endswith('/'):
                 matched_with_slash = spec_obj.match_file(rel_path_str + '/')
-                print(f"[DEBUG] is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}/': Matched={matched_with_slash} (as directory)")
+                logging.debug(f"is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}/': Matched={matched_with_slash} (as directory)")
                 if matched_with_slash:
                     return True
 
         except ValueError:
             # This path is not a child of this base_path, so this spec doesn't apply to it.
             # This is expected in multi-repo scenarios where paths aren't hierarchical to all specs.
-            print(f"[DEBUG] is_ignored_by_stack:   - '{canonical_path}' not relative to spec base '{base_path}', skipping this spec.")
+            logging.debug(f"is_ignored_by_stack:   - '{canonical_path}' not relative to spec base '{base_path}', skipping this spec.")
             continue
         except Exception as e:
             print(f"[ERROR] is_ignored_by_stack: An unexpected error occurred: {e}")
             continue
 
-    print(f"[DEBUG] is_ignored_by_stack: '{canonical_path}' NOT ignored by any active specs.") # NEW
+    logging.debug(f"is_ignored_by_stack: '{canonical_path}' NOT ignored by any active specs.") # NEW
     return False
 
 def update_gitignore_specs(entry: Path, active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):

@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from typing import List, Set # <--- ADD THIS LINE
 import hashlib
+import logging
 
 class Workspace:
     def __init__(self, json_file=None, paths=None, cwd=None):
@@ -34,15 +35,15 @@ class Workspace:
                 p_resolved = Path(p_str).resolve()
 
                 if self._is_blacklisted_by_generator_pattern(p_resolved):
-                    print(f"[DEBUG] Generated path '{p_resolved}' matched blacklist pattern, skipping.")
+                    logging.debug(f"Generated path '{p_resolved}' matched blacklist pattern, skipping.")
                     continue
 
                 if p_resolved.exists() and p_resolved not in self._ignored_paths:
                     self._generated_paths.add(p_resolved)
                 elif not p_resolved.exists():
-                    print(f"[WARNING] Generated path '{p_resolved}' does not exist, skipping.")
+                    logging.warning(f" Generated path '{p_resolved}' does not exist, skipping.")
 
-        print(f"[DEBUG] Workspace initialized: Generated={len(self._generated_paths)}, User={len(self._user_paths)}, Ignored={len(self._ignored_paths)}, Blacklist Patterns={len(self._generator_blacklist_patterns)}")
+        logging.debug(f"Workspace initialized: Generated={len(self._generated_paths)}, User={len(self._user_paths)}, Ignored={len(self._ignored_paths)}, Blacklist Patterns={len(self._generator_blacklist_patterns)}")
 
     def _load_config_from_json(self):
         """Helper to load all configuration aspects (user_paths, ignored_paths, blacklist, and state_config) from JSON."""
@@ -50,7 +51,7 @@ class Workspace:
         current_file_hash_on_disk = self._calculate_file_hash(self.json_file)
 
         if not self.json_file.exists() or self.json_file.stat().st_size == 0:
-            print(f"[DEBUG] Workspace JSON file '{self.json_file}' not found or is empty.")
+            logging.debug(f"Workspace JSON file '{self.json_file}' not found or is empty.")
             # Set initial config to defaults if file is empty/non-existent
             self._initial_user_paths = set()
             self._initial_ignored_paths = set()
@@ -84,7 +85,7 @@ class Workspace:
                 if p_resolved.exists():
                     loaded_user_paths.add(p_resolved)
                 else:
-                    print(f"[WARNING] User path '{p_resolved}' from {self.json_file} does not exist on load, skipping.")
+                    logging.warning(f" User path '{p_resolved}' from {self.json_file} does not exist on load, skipping.")
 
             loaded_ignored_paths: Set[Path] = set(Path(p).resolve() for p in data.get("ignored_paths", []))
             loaded_patterns: List[str] = data.get("generator_blacklist_patterns", [])
@@ -106,10 +107,10 @@ class Workspace:
             # Update the last loaded hash after successful load
             self._last_loaded_hash = current_file_hash_on_disk
 
-            print(f"[DEBUG] Loaded {len(self._user_paths)} user paths, {len(self._ignored_paths)} ignored paths, {len(self._generator_blacklist_patterns)} blacklist patterns, and State config from '{self.json_file}'.")
+            logging.debug(f"Loaded {len(self._user_paths)} user paths, {len(self._ignored_paths)} ignored paths, {len(self._generator_blacklist_patterns)} blacklist patterns, and State config from '{self.json_file}'.")
 
         except (json.JSONDecodeError, FileNotFoundError, Exception) as e:
-            print(f"[WARNING] Could not load workspace.json: {e}. Starting with fresh configuration.")
+            logging.warning(f" Could not load workspace.json: {e}. Starting with fresh configuration.")
             # Ensure _initial_* capture defaults if load failed
             self._initial_user_paths = set()
             self._initial_ignored_paths = set()
@@ -161,7 +162,7 @@ class Workspace:
         """Saves the current workspace state (paths, blacklist, and state config) to the JSON file."""
         if json_file_path:
             self.json_file = json_file_path.resolve()
-            print(f"[INFO] Workspace file path updated to: {self.json_file}")
+            logging.info(f"Workspace file path updated to: {self.json_file}")
 
         tmp_path = self.json_file.with_suffix(".tmp")
         try:
@@ -191,7 +192,7 @@ class Workspace:
                 fcntl.flock(f, fcntl.LOCK_UN)
             
             tmp_path.rename(self.json_file) # Atomic rename
-            print(f"[INFO] Workspace saved to: {self.json_file}. User paths: {len(self._user_paths)}, Ignored paths: {len(self._ignored_paths)}, Blacklist patterns: {len(self._generator_blacklist_patterns)}")
+            logging.info(f"Workspace saved to: {self.json_file}. User paths: {len(self._user_paths)}, Ignored paths: {len(self._ignored_paths)}, Blacklist patterns: {len(self._generator_blacklist_patterns)}")
             
             # Update the last loaded hash after successful save
             self._last_loaded_hash = self._calculate_file_hash(self.json_file)
@@ -211,19 +212,19 @@ class Workspace:
             self.state.is_dirty = True
             self.state.autoSave(self.save) # This will call workspace.save() and clear dirty flag
         else:
-            print("[WARNING] Workspace's state object is not set. Cannot mark dirty or auto-save via state.")
+            logging.warning("[WARNING] Workspace's state object is not set. Cannot mark dirty or auto-save via state.")
 
     def add_generator_blacklist_pattern(self, pattern: str):
         if pattern not in self._generator_blacklist_patterns:
             self._generator_blacklist_patterns.append(pattern)
             self._mark_dirty_and_auto_save()
-            print(f"[DEBUG] Added generator blacklist pattern: '{pattern}'.")
+            logging.debug(f"Added generator blacklist pattern: '{pattern}'.")
 
     def remove_generator_blacklist_pattern(self, pattern: str):
         if pattern in self._generator_blacklist_patterns:
             self._generator_blacklist_patterns.remove(pattern)
             self._mark_dirty_and_auto_save()
-            print(f"[DEBUG] Removed generator blacklist pattern: '{pattern}'.")
+            logging.debug(f"Removed generator blacklist pattern: '{pattern}'.")
 
     def get_generator_blacklist_patterns(self) -> List[str]: # Type hint corrected
         return self._generator_blacklist_patterns.copy()
@@ -240,7 +241,7 @@ class Workspace:
                 added_count += 1
         if added_count > 0:
             self._mark_dirty_and_auto_save()
-            print(f"[INFO] Added {added_count} paths to workspace.")
+            logging.info(f"Added {added_count} paths to workspace.")
 
     def remove(self, entries: List[str], root_dir: Path = None): # Type hints corrected
         root = Path(root_dir) if root_dir else self.cwd
@@ -257,7 +258,7 @@ class Workspace:
                  removed_count += 1
         if removed_count > 0:
             self._mark_dirty_and_auto_save()
-            print(f"[INFO] Removed {removed_count} paths from workspace (added to ignored list).")
+            logging.info(f"Removed {removed_count} paths from workspace (added to ignored list).")
 
     def _calculate_file_hash(self, file_path: Path) -> str | None:
         """Calculates the SHA256 hash of the given file's content."""
@@ -283,7 +284,7 @@ class Workspace:
         if not self.json_file.exists():
             # If file disappeared, treat as changed or fresh start
             if self._last_loaded_hash is not None:
-                print(f"[INFO] Workspace file '{self.json_file}' no longer exists; reloading to empty state.")
+                logging.info(f"Workspace file '{self.json_file}' no longer exists; reloading to empty state.")
                 self._load_config_from_json() # Will effectively clear internal state
             return
 
@@ -293,7 +294,7 @@ class Workspace:
             return
 
         if self._last_loaded_hash != current_file_hash:
-            print(f"[INFO] Workspace file '{self.json_file}' has changed externally. Reloading configuration.")
+            logging.info(f"Workspace file '{self.json_file}' has changed externally. Reloading configuration.")
             self._load_config_from_json() # This method also updates self._last_loaded_hash
 
     def list(self) -> List[Path]:
@@ -328,7 +329,7 @@ class Workspace:
         self._ignored_paths.clear()
         self._generator_blacklist_patterns.clear()
         self._mark_dirty_and_auto_save()
-        print("[INFO] Workspace reset (all paths and blacklist patterns cleared).")
+        logging.info("[INFO] Workspace reset (all paths and blacklist patterns cleared).")
 
     def get_current_json_file_path(self) -> Path: # Type hint corrected
         return self.json_file
@@ -353,7 +354,7 @@ class Workspace:
             self._ignored_paths != self._initial_ignored_paths or \
             set(self._generator_blacklist_patterns) != set(self._initial_generator_blacklist_patterns):
                 is_dirty_flag = True
-                print("[DEBUG] Initial dirty state reason: Workspace config loaded from JSON differs from in-memory (e.g., paths filtered out or modified before setState).")
+                logging.debug("Initial dirty state reason: Workspace config loaded from JSON differs from in-memory (e.g., paths filtered out or modified before setState).")
 
             # 2. Check if command-line input paths introduced new active paths
             # If 'generated_paths' exist (from CLI) AND they aren't already part of 'user_paths' from JSON,
@@ -361,10 +362,10 @@ class Workspace:
             if not is_dirty_flag and self._generated_paths:
                 
                 # --- START NEW DEBUGGING CODE ---
-                print("\n[DEBUG DETAIL] Checking for new generated paths:")
-                print(f"  _generated_paths: {self._generated_paths}")
-                print(f"  _initial_json_file_exists: {self._initial_json_file_exists}")
-                print(f"  _initial_user_paths: {self._initial_user_paths}")
+                logging.debug("Checking for new generated paths:")
+                logging.debug(f"  _generated_paths: {self._generated_paths}")
+                logging.debug(f"  _initial_json_file_exists: {self._initial_json_file_exists}")
+                logging.debug(f"  _initial_user_paths: {self._initial_user_paths}")
 
                 paths_not_in_initial_user_paths = [
                     p for p in self._generated_paths if p not in self._initial_user_paths
@@ -376,7 +377,7 @@ class Workspace:
                 if not self._initial_json_file_exists or \
                 any(p not in self._initial_user_paths for p in self._generated_paths):
                     is_dirty_flag = True
-                    print("[DEBUG] Initial dirty state reason: New generated paths introduced via CLI input or JSON was empty.")
+                    logging.debug("Initial dirty state reason: New generated paths introduced via CLI input or JSON was empty.")
             
             # 3. Check for changes in State-specific config
             if not is_dirty_flag and hasattr(self, 'state') and self.state is not None:
@@ -384,28 +385,28 @@ class Workspace:
                 
                 # --- START NEW DEBUGGING CODE ---
                 # Added a print here for state config comparison for future debugging if needed
-                print("\n[DEBUG DETAIL] Checking State config consistency:")
-                print(f"  Current persistable State config: {current_state_config}")
-                print(f"  Initial loaded State config: {self._initial_state_config}")
+                logging.debug("Checking State config consistency:")
+                logging.debug(f"  Current persistable State config: {current_state_config}")
+                logging.debug(f"  Initial loaded State config: {self._initial_state_config}")
                 # --- END NEW DEBUGGING CODE ---
 
                 if current_state_config != self._initial_state_config:
                     is_dirty_flag = True
-                    print("[DEBUG] Initial dirty state reason: State configuration differs from loaded JSON or defaults.")
+                    logging.debug("Initial dirty state reason: State configuration differs from loaded JSON or defaults.")
             
             # Final status report
             if hasattr(self, 'state') and self.state is not None:
                 self.state.is_dirty = is_dirty_flag
                 if self.state.is_dirty:
-                    print("\n[DEBUG] Workspace is marked as initially dirty.")
+                    logging.debug("Workspace is marked as initially dirty.")
                 else:
-                    print("\n[DEBUG] Workspace is initially clean.")
+                    logging.debug("Workspace is initially clean.")
             else:
-                print("[WARNING] State object not available to set initial dirty flag.")
+                logging.warning("State object not available to set initial dirty flag.")
     
     def autoSave(self):
         if hasattr(self, 'state') and self.state is not None:
             return self.state.autoSave(self.save)
         else:
-            print("[ERROR] Workspace's state object is not set. Cannot auto-save.")
+            logging.error("[ERROR] Workspace's state object is not set. Cannot auto-save.")
 

@@ -2,6 +2,7 @@ from pathlib import Path
 from filters.gitignore import update_gitignore_specs, is_ignored_by_stack, load_gitignore_spec
 from filters.path_utils import resolve_path_and_inode, list_directory_children
 from filters.filtering import filter_ignored, filter_entries
+import logging
 
 def resolve_root_path(path):
     try:
@@ -19,56 +20,56 @@ def get_gitignore_specs(path: Path, use_gitignore: bool):
 def expand_directories(entries: list[Path], state, current_depth: int,
                        active_gitignore_specs: list[tuple],
                        visited_inodes_for_current_traversal: set) -> list[Path]:
-    print(f"[DEBUG] expand_directories: Called (depth {current_depth}) with {len(entries)} input entries.") # NEW
+    logging.debug(f"expand_directories: Called (depth {current_depth}) with {len(entries)} input entries.") # NEW
     expanded = []
     for entry in entries:
         canonical_path, inode_key = resolve_path_and_inode(entry)
         if not canonical_path or not inode_key:
-            print(f"[DEBUG] expand_directories: Skipping invalid path/inode {entry}") # NEW
+            logging.debug(f"expand_directories: Skipping invalid path/inode {entry}") # NEW
             continue
         if inode_key in visited_inodes_for_current_traversal:
-            print(f"[DEBUG] expand_directories: Skipping already visited inode {entry}") # NEW
+            logging.debug(f"expand_directories: Skipping already visited inode {entry}") # NEW
             continue
         visited_inodes_for_current_traversal.add(inode_key)
 
         is_current_entry_ignored = state.use_gitignore and is_ignored_by_stack(entry, active_gitignore_specs)
         if is_current_entry_ignored:
-            print(f"[DEBUG] expand_directories: IGNORED '{entry}' at current depth, skipping.") # More precise
+            logging.debug(f"expand_directories: IGNORED '{entry}' at current depth, skipping.") # More precise
             continue
 
         expanded.append(entry) # Add to list ONLY if not ignored at this point
-        print(f"[DEBUG] expand_directories: ADDED '{entry}' to expanded list.") # NEW
+        logging.debug(f"expand_directories: ADDED '{entry}' to expanded list.") # NEW
 
         if not (state.directory_expansion and entry.is_dir()):
-            print(f"[DEBUG] expand_directories: Not a directory for expansion or expansion off: {entry}") # NEW
+            logging.debug(f"expand_directories: Not a directory for expansion or expansion off: {entry}") # NEW
             continue
 
         if state.expansion_depth is not None and current_depth >= state.expansion_depth:
-            print(f"[DEBUG] expand_directories: Max depth reached for {entry}") # NEW
+            logging.debug(f"expand_directories: Max depth reached for {entry}") # NEW
             continue
 
         new_active_gitignore_specs = update_gitignore_specs(entry, active_gitignore_specs)
         children = list_directory_children(entry, state.include_dotfiles)
-        print(f"[DEBUG] expand_directories: Listing children for {entry}. Found {len(children)}.") # NEW
+        logging.debug(f"expand_directories: Listing children for {entry}. Found {len(children)}.") # NEW
 
         if state.expansion_recursion:
-            print(f"[DEBUG] expand_directories: Recursing into children of {entry}") # NEW
+            logging.debug(f"expand_directories: Recursing into children of {entry}") # NEW
             expanded.extend(expand_directories(
                 children, state, current_depth + 1, new_active_gitignore_specs,
                 visited_inodes_for_current_traversal
             ))
         else:
-            print(f"[DEBUG] expand_directories: Filtering children of {entry} (non-recursive)") # NEW
+            logging.debug(f"expand_directories: Filtering children of {entry} (non-recursive)") # NEW
             filtered_children = filter_ignored(children, state.use_gitignore, new_active_gitignore_specs)
             expanded.extend(filtered_children)
 
-    print(f"[DEBUG] expand_directories: Returning {len(expanded)} entries (depth {current_depth}).") # NEW
+    logging.debug(f"expand_directories: Returning {len(expanded)} entries (depth {current_depth}).") # NEW
     return expanded
 
 def get_entries(state):
-    print(f"[DEBUG] get_entries: Starting entry discovery.")
+    logging.debug(f"get_entries: Starting entry discovery.")
     workspace_roots = list(state.workspace.list())
-    print(f"[DEBUG] get_entries: Workspace roots: {workspace_roots}")
+    logging.debug(f"get_entries: Workspace roots: {workspace_roots}")
 
     all_expanded_entries = []
     processed_root_inodes = set()
@@ -82,24 +83,24 @@ def get_entries(state):
 
     # Load the global gitignore specs ONCE for the entire process
     global_gitignore_specs = get_gitignore_specs(project_root_for_gitignore, state.use_gitignore)
-    print(f"[DEBUG] get_entries: Loaded global gitignore specs from '{project_root_for_gitignore}': {len(global_gitignore_specs)} specs.")
+    logging.debug(f"get_entries: Loaded global gitignore specs from '{project_root_for_gitignore}': {len(global_gitignore_specs)} specs.")
 
     for initial_path_root in workspace_roots:
-        print(f"[DEBUG] get_entries: Processing root '{initial_path_root}'")
+        logging.debug(f"get_entries: Processing root '{initial_path_root}'")
 
         canonical_path, inode_key = resolve_path_and_inode(initial_path_root)
         if not canonical_path or not inode_key:
-            print(f"[DEBUG] get_entries: Skipping invalid initial root path: {initial_path_root}")
+            logging.debug(f"get_entries: Skipping invalid initial root path: {initial_path_root}")
             continue
         if inode_key in processed_root_inodes:
-            print(f"[DEBUG] get_entries: Skipping already processed root inode: {initial_path_root}")
+            logging.debug(f"get_entries: Skipping already processed root inode: {initial_path_root}")
             continue
         processed_root_inodes.add(inode_key)
 
         # Check if the initial_path_root itself is ignored by the global gitignore.
         # This is important for roots like '.venv' if they were in workspace.list()
         if state.use_gitignore and is_ignored_by_stack(initial_path_root, global_gitignore_specs):
-            print(f"[DEBUG] get_entries: Initial root '{initial_path_root}' ignored by global .gitignore, skipping its expansion.")
+            logging.debug(f"get_entries: Initial root '{initial_path_root}' ignored by global .gitignore, skipping its expansion.")
             continue
 
         visited_inodes_for_this_project = set() # Unique per traversal path
@@ -113,12 +114,12 @@ def get_entries(state):
             active_gitignore_specs=global_gitignore_specs,
             visited_inodes_for_current_traversal=visited_inodes_for_this_project
         )
-        print(f"[DEBUG] get_entries: Expanded {len(expanded_for_this_root)} entries for root '{initial_path_root}'.")
+        logging.debug(f"get_entries: Expanded {len(expanded_for_this_root)} entries for root '{initial_path_root}'.")
         all_expanded_entries.extend(expanded_for_this_root)
 
-    print(f"[DEBUG] get_entries: All roots processed. Total {len(all_expanded_entries)} entries before final filter.")
+    logging.debug(f"get_entries: All roots processed. Total {len(all_expanded_entries)} entries before final filter.")
 
     # This is the FINAL filter call
     filtered = filter_entries(all_expanded_entries, state)
-    print(f"[DEBUG] get_entries: Final list contains {len(filtered)} entries.")
+    logging.debug(f"get_entries: Final list contains {len(filtered)} entries.")
     return filtered
