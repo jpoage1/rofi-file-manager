@@ -391,8 +391,8 @@ class Workspace:
             await asyncio.to_thread(self._save_cache, cache_set)
             return cache_set
 
-    def _save_cache(self, cache_data):
-        text = json.dumps(sorted(cache_data))
+    def _save_cache(self):
+        text = json.dumps(sorted(self.cache))
         self.cache_file.write_text(text)
 
     def _validate_cache(self):
