@@ -7,3 +7,4 @@ source /srv/projects/editor-menu/editor.sh
 # echo "${dirs[@]}"
 
 run --cwd=/srv/projects --interface=socket --workspace-file=workspace.json -- "${dirs[@]}"
+SERVER_PID=$! # Get the PID of the background server

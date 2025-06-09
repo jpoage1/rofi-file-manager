@@ -76,4 +76,4 @@ dirs=(
 # dirs=("${filtered_dirs[@]}")
 # printf "%s\n" "${dirs[@]}" | grep "$1"
 source /srv/projects/editor-menu/editor.sh
-run --cwd="$HOME" --workspace-file=".config/workspace.json" -- "${dirs[@]}"
+run --cwd="$HOME" --interface=socket --frontend=rofi --workspace-file=".config/workspace.json" -- "${dirs[@]}"

@@ -5,23 +5,24 @@ from state.search_options import SearchOptions
 from filters.main import get_entries
 from filesystem.tree_utils import build_tree, flatten_tree
 
-from .menu_local import run_local_menu
-from .menu_socket import run_socket_client, run_socket_server
 from .menu_workspace import WorkspaceActions
 from .menu_clipboard import ClipboardActions
 import re
 import logging
+from menu_manager.frontend import run_fzf, run_rofi, run_cli_selector, run_via_socket
+
+# logging.basicConfig(level=logging.DEBUG)
 
 class MenuManager(WorkspaceActions, ClipboardActions):
-    def __init__(self, state, backend=None, frontend=None, host='127.0.0.1', port=65432):
+    def __init__(self, state, interface=None, frontend=None, host=None, port=None):
         self.state = state
-        self.backend = backend or "fzf"
+        self.interface = interface or "cli"
         self.frontend = frontend or "fzf"
         self.search_options = SearchOptions(self, state)
         self.menu_structure_callable = self._get_main_menu_structure
         self.socket_conn = None
-        self.host = host
-        self.port = port
+        self.host = host or '127.0.0.1'
+        self.port = int(port or 65432)
 
     def _get_main_menu_structure(self):
         return {
@@ -57,24 +58,31 @@ class MenuManager(WorkspaceActions, ClipboardActions):
             'Remove from clipboard queue': self.remove_from_clipboard,
         }
 
-    def main_loop(self):
-        if self.backend == "socket-client":
-            run_socket_client(self)
-        elif self.backend == "socket":
-            run_socket_server(self)
+
+    def selector(self, *args, **kwargs):
+        if self.interface == "socket-server":
+            return run_via_socket(self.socket_conn, *args, **kwargs)
+        
+        frontend = self.frontend
+        if frontend == "fzf":
+             return run_fzf(*args, **kwargs)
+        elif frontend == "rofi":
+             return run_rofi(*args, **kwargs)
+        elif frontend == "cli":
+             return run_cli_selector(*args, **kwargs)
         else:
-            run_local_menu(self)
-
-    def run_selector(self, *args, **kwargs):
-        from menu.interface import run_fzf, run_rofi, run_via_socket
-        if self.frontend == "fzf":
-            return run_fzf(*args, **kwargs)
-        elif self.frontend == "rofi":
-            return run_rofi(*args, **kwargs)
-        elif self.frontend == "socket":
-            return run_via_socket(*args, **kwargs)
-        return []
-
+             print(f"No selector found for interface {self.interface} with frontend {self.frontend}")
+             exit(1)
+        
+    def run_selector(self, entries, prompt, multi_select=False, text_input=True):
+        try:
+            print("Using selector")
+            selected_option = self.selector(entries, prompt, multi_select, text_input)
+            return selected_option
+        except EOFError:
+            logging.info("[MenuManager] EOF received, exiting CLI.")
+            return ["Quit"]
+        
     def navigate_menu(self, menu_source):
         while True:
             current_menu_dict = menu_source() if callable(menu_source) else menu_source
@@ -83,8 +91,8 @@ class MenuManager(WorkspaceActions, ClipboardActions):
             choice = self.run_selector(list(current_menu_dict.keys()), prompt="Select an option")
             
             if not choice:
-                logging.info("[MenuManager] User cancelled selector or received empty choice. Exiting current menu level.")
-                return 'CANCELLED' # Propagate cancellation
+                # logging.info("[MenuManager] User cancelled selector or received empty choice. Exiting current menu level.")
+                return '' # Propagate cancellation
 
             selected_option_key = choice[0]
             action = current_menu_dict.get(selected_option_key)

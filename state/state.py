@@ -6,7 +6,7 @@ from clipboard.clipboard import Clipboard
 from search_config import SearchConfig
 import logging
 class State:
-    def __init__(self, workspace=None, clipboard=None, root_dir=None, interface=None):
+    def __init__(self, workspace=None, clipboard=None, root_dir=None):
         self.use_gitignore = True
         self.include_dotfiles = False
         self.expansion_depth = None
@@ -28,7 +28,6 @@ class State:
         self.search_config = SearchConfig()
         self.is_dirty: bool = False # True if there are unsaved changes
         self.auto_save_enabled: bool = False # Controls if changes are auto-saveds
-        self.interface = interface or "rofi"
 
     def push_state(self):
         snapshot = {
