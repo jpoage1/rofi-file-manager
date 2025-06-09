@@ -6,11 +6,8 @@ import re
 from typing import List, Set
 import hashlib
 import logging
-import asyncio
-from threading import Thread
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import threading
 
 from menu_manager.watcher import CacheUpdater
@@ -137,6 +134,7 @@ class Workspace:
             self._initial_generator_blacklist_patterns = []
             self._initial_state_config = self._get_default_state_config()
             self._last_loaded_hash = None # Clear hash if load failed (as file content is unreliable)
+            
     def _get_default_state_config(self) -> dict:
         """Returns a dictionary representing the default values for the persistable State attributes."""
         return {
@@ -328,16 +326,17 @@ class Workspace:
         for p in all_potential_paths:
             if not self._is_blacklisted_by_generator_pattern(p):
                 active_paths.add(p)
-        return sorted(list(active_paths))
+        return list(active_paths)
 
     
-    def list_workspace_files(self) -> List[Path]: # Type hint corrected
-        """Returns a sorted list of all active file paths in the workspace."""
-        return sorted(p for p in self.list() if p.is_file())
+    def list_workspace_files(self) -> Set[Path]:
+        return {p for p in self.list() if p.is_file()}
 
-    def list_directories(self) -> List[Path]: # Type hint corrected
-        """Returns a sorted list of all active directory paths in the workspace."""
-        return sorted(p for p in self.list() if p.is_dir())
+    def list_directories(self) -> Set[Path]:
+        return {p for p in self.list() if p.is_dir()}
+
+    def list_paths(self) -> Set[Path]:
+        return self.list_directories().union(self.list_workspace_files())
 
     def reset(self):
         self._user_paths.clear()
@@ -369,35 +368,35 @@ class Workspace:
         """Sets the state object and then determines if the workspace is initially dirty."""
         self.state = state
         self.state.apply_config(self._initial_state_config)
+        from menu_manager.payload import get_timestamp
+        # print(f"Building cache at {get_timestamp()}")
+
+    def initialize_cache(self):
         self._determine_initial_dirty_state()
-        
-        asyncio.run(self.initialize_cache())
-
-    async def initialize_cache(self):
-        self.cache = await self._load_or_build_cache()
+        self.cache = self._load_or_build_cache()
         self.start_file_watcher()
-        Thread(target=self._validate_cache, daemon=True).start()
+        self._validate_cache
 
-    async def _load_or_build_cache(self):
+    def _load_or_build_cache(self):
         if self.cache_file.exists():
             try:
-                text = await asyncio.to_thread(self.cache_file.read_text)
+                text = self.cache_file.read_text()
                 return set(json.loads(text))
             except:
                 return set()
         else:
-            cache = await asyncio.to_thread(self.build_cache)
+            cache = self.build_cache()
             cache_set = set(str(p) for p in cache)
-            await asyncio.to_thread(self._save_cache, cache_set)
+            self._save_cache(cache_set)
             return cache_set
 
     def _save_cache(self):
-        text = json.dumps(sorted(self.cache))
+        text = json.dumps(self.cache)
         self.cache_file.write_text(text)
 
     def _validate_cache(self):
         from state.scanner import validate_cache_against_fs
-        updated = validate_cache_against_fs(self.cache, set(str(p) for p in self.list()))
+        updated = validate_cache_against_fs(self.cache, self.list_directories(), self.list_directories())
         if updated:
             self._save_cache()
 
@@ -475,7 +474,7 @@ class Workspace:
     def build_cache(self):
         state = self.state
         logging.debug("build_greedy_cache: Starting full workspace scan and caching.")
-        workspace_roots = list(state.workspace.list())
+        workspace_roots = list(state.workspace.list_directories())
         processed_root_inodes = set()
         project_root_for_gitignore = Path.cwd()
         global_gitignore_specs = get_gitignore_specs(project_root_for_gitignore, state.use_gitignore)
@@ -503,8 +502,9 @@ class Workspace:
             )
             cache.extend(expanded)
 
+        cache.extend(self.list_files)
         logging.debug(f"build_greedy_cache: Cached {len(cache)} entries total.")
-        return cache
+        return sorted(cache)
 
     def query_from_cache(self):
         cache = self.cache
