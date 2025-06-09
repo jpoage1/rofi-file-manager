@@ -40,13 +40,14 @@ def main():
         cwd=args.cwd
     )
     state = State(workspace)
-    workspace.setState(state)
+    workspace.set_state(state)
 
     if state.is_dirty and state.auto_save_enabled:
         logging.info("[INFO] Performing initial auto-save due to dirty state and auto-save being enabled.")
         state.autoSave(state.workspace.save)
 
-    if args.interface == 'socket':
+    if args.interface == 'socket' or args.interface == 'sockets':
+        print("Starting in socket mode")
         port = args.port or get_free_port()
         host = args.host or '127.0.0.1'
 
@@ -99,10 +100,10 @@ def main():
     else:
         menu_manager.port = 12345
 
-    if args.interface == "socket-server":
+    if args.interface == "socket-server" or args.interface == "sockets-server":
         logging.info("[INFO] Starting application in server mode (interface: socket).")
         run_socket_server(menu_manager)
-    elif args.interface == "socket-client":
+    elif args.interface == "socket-client" or  args.interface == "sockets-client":
         logging.info("[INFO] Starting application in client mode (interface: socket-client).")
         run_socket_client(menu_manager)
     else:

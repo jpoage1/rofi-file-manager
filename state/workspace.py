@@ -3,12 +3,19 @@ import json
 import fcntl
 from pathlib import Path
 import re
-from typing import List, Set # <--- ADD THIS LINE
+from typing import List, Set
 import hashlib
 import logging
 
+
+from filters.gitignore import is_ignored_by_stack
+from filters.path_utils import resolve_path_and_inode
+from filters.filtering import filter_entries
+from filters.main import expand_directories, get_gitignore_specs
+
 class Workspace:
     def __init__(self, json_file=None, paths=None, cwd=None):
+        self.state = None
         self.cwd = Path(cwd).resolve() if cwd else Path.cwd().resolve()
         self.json_file = Path(json_file if json_file else "workspace.json")
 
@@ -330,11 +337,18 @@ class Workspace:
     def get_current_json_file_path(self) -> Path: # Type hint corrected
         return self.json_file
 
-    def setState(self, state):
+    def set_state(self, state):
         """Sets the state object and then determines if the workspace is initially dirty."""
         self.state = state
         self.state.apply_config(self._initial_state_config)
         self._determine_initial_dirty_state()
+
+        import time
+        start = time.perf_counter()
+        state.cache = self.build_cache()
+        end = time.perf_counter()
+        from menu_manager.payload import write_log
+        write_log(f"build_cache: Execution time: {end - start:.6f} seconds")
         
     def _determine_initial_dirty_state(self):
             """
@@ -406,3 +420,49 @@ class Workspace:
         else:
             logging.error("[ERROR] Workspace's state object is not set. Cannot auto-save.")
 
+    def build_cache(self):
+        state = self.state
+        logging.debug("build_greedy_cache: Starting full workspace scan and caching.")
+        workspace_roots = list(state.workspace.list())
+        processed_root_inodes = set()
+        project_root_for_gitignore = Path.cwd()
+        global_gitignore_specs = get_gitignore_specs(project_root_for_gitignore, state.use_gitignore)
+
+        cache = []
+
+        for root in workspace_roots:
+            canonical_path, inode_key = resolve_path_and_inode(root)
+            if not canonical_path or not inode_key or inode_key in processed_root_inodes:
+                continue
+            processed_root_inodes.add(inode_key)
+
+            if state.use_gitignore and is_ignored_by_stack(root, global_gitignore_specs):
+                continue
+
+            visited_inodes = set()
+            root_entries = [root]
+
+            expanded = expand_directories(
+                root_entries,
+                state,
+                current_depth=0,
+                active_gitignore_specs=global_gitignore_specs,
+                visited_inodes_for_current_traversal=visited_inodes
+            )
+            cache.extend(expanded)
+
+        logging.debug(f"build_greedy_cache: Cached {len(cache)} entries total.")
+        return cache
+
+    def query_from_cache(self):
+        cache = self.state.get_cache()
+        logging.debug(f"query_from_cache: Filtering {len(cache)} cached entries.")
+        filtered = filter_entries(cache, self.get_state())
+        logging.debug(f"query_from_cache: Filtered down to {len(filtered)} entries.")
+        return filtered
+    
+    def get_state(self):
+        if not self.state:
+            print("State not initialized")
+            exit(1)
+        return self.state
