@@ -10,7 +10,7 @@ from .menu_clipboard import ClipboardActions
 import re
 import logging
 from menu_manager.frontend import run_fzf, run_rofi, run_cli_selector, run_via_socket
-
+import time
 # logging.basicConfig(level=logging.DEBUG)
 
 class MenuManager(WorkspaceActions, ClipboardActions):
@@ -119,8 +119,25 @@ class MenuManager(WorkspaceActions, ClipboardActions):
     def search_workspace(self):
         entries = get_entries(self.state)
         entries_str = [str(e) for e in entries]
+
+        # potential performance reduction:
+        start = time.perf_counter()
+        # Begin performance test
         tree = build_tree(entries_str)
         choices = flatten_tree(tree)
+        # End performance test
+        end = time.perf_counter()
+        print("# TEST choices = flatten_tree(tree)")
+        print(f"## Execution time: {end - start:.6f} seconds")
+
+        # start = time.perf_counter()
+        # # Begin performance test
+        # choices = sorted(entries_str) # Potential performance improvement
+        # # End performance test
+        # end = time.perf_counter()
+        # print("# TEST canonical_path, inode_key = resolve_path_and_inode(entry)")
+        # print(f"## Execution time: {end - start:.6f} seconds")
+        # print()
 
         while True:
             selection = self.run_selector(choices, prompt="Workspace Files")

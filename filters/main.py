@@ -4,6 +4,9 @@ from filters.path_utils import resolve_path_and_inode, list_directory_children
 from filters.filtering import filter_ignored, filter_entries
 import logging
 
+import time
+
+
 def resolve_root_path(path):
     try:
         canonical_root = path.resolve()
@@ -17,13 +20,46 @@ def get_gitignore_specs(path: Path, use_gitignore: bool):
         return []
     root_spec = load_gitignore_spec(path)
     return [(root_spec, path)] if root_spec else []
+
+# @functools.lru_cache(maxsize=None)
+def resolve_inode(path_str):
+    path = Path(path_str)
+    return resolve_path_and_inode(path)
+
+def fast_list_children(entry):
+    try:
+        with os.scandir(entry) as it:
+            return [Path(e.path) for e in it if e.name[0] != '.']
+    except Exception:
+        return []
+
 def expand_directories(entries: list[Path], state, current_depth: int,
                        active_gitignore_specs: list[tuple],
                        visited_inodes_for_current_traversal: set) -> list[Path]:
     logging.debug(f"expand_directories: Called (depth {current_depth}) with {len(entries)} input entries.") # NEW
     expanded = []
     for entry in entries:
-        canonical_path, inode_key = resolve_path_and_inode(entry)
+
+        
+
+        start = time.perf_counter()
+        # Begin performance test
+        canonical_path, inode_key = resolve_path_and_inode(entry) # Potential performance reduction
+        # End performance test
+        end = time.perf_counter()
+        print("# TEST canonical_path, inode_key = resolve_path_and_inode(entry)")
+        print(f"## Execution time: {end - start:.6f} seconds")
+
+
+        start = time.perf_counter()
+        # Begin performance test
+        canonical_path, inode_key = resolve_inode(str(entry)) # Potential performance improvement
+        # End performance test
+        end = time.perf_counter()
+        print("# TEST canonical_path, inode_key = resolve_inode(str(entry))")
+        print(f"## Execution time: {end - start:.6f} seconds")
+        print()
+        
         if not canonical_path or not inode_key:
             logging.debug(f"expand_directories: Skipping invalid path/inode {entry}") # NEW
             continue
@@ -49,11 +85,33 @@ def expand_directories(entries: list[Path], state, current_depth: int,
             continue
 
         new_active_gitignore_specs = update_gitignore_specs(entry, active_gitignore_specs)
-        children = list_directory_children(entry, state.include_dotfiles)
+
+        start = time.perf_counter()
+        # Begin performance test
+        # children = list_directory_children(entry, state.include_dotfiles) # Potential performance reduction
+        # End performance test
+        end = time.perf_counter()
+        print("# TEST canonical_path, inode_key = resolve_path_and_inode(entry)")
+        print(f"## Execution time: {end - start:.6f} seconds")
+
+        # Potential performance improvement
+        start = time.perf_counter()
+        # begin performance test
+        if state.include_dotfiles:
+            children = list_directory_children(entry, True)
+        else:
+            children = fast_list_children(entry)
+        # end performance test
+        end = time.perf_counter()
+        print("# TEST if state.include_dotfiles:")
+        print(f"## Execution time: {end - start:.6f} seconds")
+        print()
+
         logging.debug(f"expand_directories: Listing children for {entry}. Found {len(children)}.") # NEW
 
         if state.expansion_recursion:
             logging.debug(f"expand_directories: Recursing into children of {entry}") # NEW
+            # fixme fast_list_children
             expanded.extend(expand_directories(
                 children, state, current_depth + 1, new_active_gitignore_specs,
                 visited_inodes_for_current_traversal
@@ -106,6 +164,7 @@ def get_entries(state):
         visited_inodes_for_this_project = set() # Unique per traversal path
         current_root_entries = [initial_path_root]
 
+        # fixme fast_list_children
         expanded_for_this_root = expand_directories(
             current_root_entries,
             state,

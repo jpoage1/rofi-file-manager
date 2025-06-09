@@ -318,10 +318,6 @@ class Workspace:
     def list_directories(self) -> List[Path]: # Type hint corrected
         """Returns a sorted list of all active directory paths in the workspace."""
         return sorted(p for p in self.list() if p.is_dir())
-    
-    def expand_directories(self):
-        # This method's implementation would depend on your expansion logic
-        pass
 
     def reset(self):
         self._user_paths.clear()

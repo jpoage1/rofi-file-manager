@@ -54,11 +54,9 @@ def run_cli_app(manager):
             menu = manager.menu_structure_callable()
             entries = list(menu.keys())
             selection = manager.run_selector(entries, "Select an option", False, False)
-
-            if selection and selection[0] == "Quit":
-                logging.info("[MenuManager] Exiting main loop.")
-                break
-            elif selection and menu.get(selection[0]):
+            if not selection:
+                return
+            elif menu.get(selection[0]):
                 menu.get(selection[0])() # Execute the selected action
             else:
                 logging.warning(f"[MenuManager] Invalid selection: {selection}. Please try again.")
