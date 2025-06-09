@@ -3,7 +3,6 @@ from filters.gitignore import update_gitignore_specs, is_ignored_by_stack, load_
 from filters.path_utils import resolve_path_and_inode, list_directory_children
 from filters.filtering import filter_ignored, filter_entries
 import logging
-
 def resolve_root_path(path):
     try:
         canonical_root = path.resolve()
