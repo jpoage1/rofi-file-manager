@@ -6,6 +6,8 @@ import re
 from typing import List, Set
 import hashlib
 import logging
+import asyncio
+from threading import Thread
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -37,6 +39,12 @@ class Workspace:
         self._initial_state_config: dict = {} # To store the state_config *as loaded from JSON*
         self._initial_json_file_exists: bool = self.json_file.exists() and self.json_file.stat().st_size > 0
         self._last_loaded_hash: str | None = None # Initialize hash tracking
+
+
+        self.cache: set[str] = set()  # cached paths (canonical strings)
+        self.cache_file = Path('.cache.json')
+        self.cache_lock = threading.RLock()
+        self.observer = None
 
         # Phase 1: Load all configuration from JSON. This will populate _initial_* sets/dict.
         self._load_config_from_json()
@@ -342,22 +350,58 @@ class Workspace:
     def get_current_json_file_path(self) -> Path: # Type hint corrected
         return self.json_file
 
+    # def set_state(self, state):
+    #     """Sets the state object and then determines if the workspace is initially dirty."""
+    #     self.state = state
+    #     self.state.apply_config(self._initial_state_config)
+    #     self._determine_initial_dirty_state()
+
+    #     import time
+    #     start = time.perf_counter()
+    #     state.cache = self.build_cache()
+    #     end = time.perf_counter()
+    #     from menu_manager.payload import write_log
+    #     write_log(f"build_cache: Execution time: {end - start:.6f} seconds")
+
+    #     self.watcher = self.start_file_watcher()
+
     def set_state(self, state):
         """Sets the state object and then determines if the workspace is initially dirty."""
         self.state = state
         self.state.apply_config(self._initial_state_config)
         self._determine_initial_dirty_state()
-
-        import time
-        start = time.perf_counter()
-        state.cache = self.build_cache()
-        end = time.perf_counter()
-        from menu_manager.payload import write_log
-        write_log(f"build_cache: Execution time: {end - start:.6f} seconds")
-
-        self.watcher = self.start_file_watcher()
-
         
+        asyncio.run(self.initialize_cache())
+
+    async def initialize_cache(self):
+        self.cache = await self._load_or_build_cache()
+        self.start_file_watcher()
+        Thread(target=self._validate_cache, daemon=True).start()
+
+    async def _load_or_build_cache(self):
+        if self.cache_file.exists():
+            try:
+                text = await asyncio.to_thread(self.cache_file.read_text)
+                return set(json.loads(text))
+            except:
+                return set()
+        else:
+            cache = await asyncio.to_thread(self.build_cache)
+            cache_set = set(str(p) for p in cache)
+            await asyncio.to_thread(self._save_cache, cache_set)
+            return cache_set
+
+    def _save_cache(self, cache_data):
+        text = json.dumps(sorted(cache_data))
+        self.cache_file.write_text(text)
+
+    def _validate_cache(self):
+        from state.scanner import validate_cache_against_fs
+        updated = validate_cache_against_fs(self.cache, set(str(p) for p in self.list()))
+        if updated:
+            self._save_cache()
+
+
     def _determine_initial_dirty_state(self):
             """
             Determines if the workspace should be marked dirty immediately after initialization
@@ -463,7 +507,7 @@ class Workspace:
         return cache
 
     def query_from_cache(self):
-        cache = self.state.get_cache()
+        cache = self.cache
         logging.debug(f"query_from_cache: Filtering {len(cache)} cached entries.")
         filtered = filter_entries(cache, self.get_state())
         logging.debug(f"query_from_cache: Filtered down to {len(filtered)} entries.")
@@ -478,10 +522,10 @@ class Workspace:
     def update_file_watcher(self):
         self.watcher.stop()
         self.watcher.join()  # ensure thread terminates
-        self.watcher = start_file_watcher()
+        self.watcher = self.start_file_watcher()
     
     def start_file_watcher(self):
-        event_handler = CacheUpdater(self.state.get_cache())
+        event_handler = CacheUpdater(self.cache)
         observer = Observer()
         root_paths = list(self.state.workspace.list())
         for root_path in root_paths:
@@ -489,4 +533,6 @@ class Workspace:
         observer_thread = threading.Thread(target=observer.start, daemon=True)
         observer_thread.start()
         return observer
+    
+
 

@@ -117,12 +117,7 @@ class MenuManager(WorkspaceActions, ClipboardActions):
 
   
     def search_workspace(self):
-        import time
-        start = time.perf_counter()
-        entries = self.state.get_cache()
-        end = time.perf_counter()
-        from menu_manager.payload import write_log
-        write_log(f"get_cache: Execution time: {end - start:.6f} seconds")
+        entries = self.state.workspace.cache
 
         entries_str = [str(e) for e in entries]
         # These are redundant, but may become useful if future features require it

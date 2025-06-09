@@ -7,6 +7,7 @@ import sys
 import time
 import logging
 import signal
+import threading
 
 from utils.utils import get_input_paths
 from menu_manager import MenuManager
