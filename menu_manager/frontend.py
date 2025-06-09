@@ -27,30 +27,6 @@ def run_rofi(entries, prompt, multi_select=False, text_input=True):
     result = proc.stdout.strip()
     return result.splitlines() if multi_select else [result] if result else []
 
-def run_via_socket(conn, entries, prompt, multi_select=False, text_input=True):
-    
-    menu_data_to_send = {
-        "prompt": prompt,
-        "entries": entries,
-        "multi_select": multi_select,
-        "text_input": text_input
-    }
-    print("Sending socket packet", menu_data_to_send)
-    send_message(conn, json.dumps(menu_data_to_send), 'server')
-
-    data = recv_message(conn, 'server')
-    if not data:
-        return []
-    try:
-        selection_data = json.loads(data)
-        print("Received pacet: ", selection_data)
-        selection = selection_data.get("selection", [])
-        if isinstance(selection, list):
-            return selection
-        return [selection]
-    except (json.JSONDecodeError, KeyError):
-        return []
-
 def run_cli_selector(entries, prompt, multi_select, text_input):
     """
     Handles user input via standard command-line input (input()).
