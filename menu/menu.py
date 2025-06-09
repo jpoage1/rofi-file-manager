@@ -5,7 +5,7 @@ from state.search_options import SearchOptions
 from state.workspace_utils import get_filtered_workspace_paths
 from filesystem.tree_utils import build_tree, flatten_tree
 from filters.main import get_entries
-from menu.interface import run_fzf, run_rofi, run_via_socket
+from menu_manager.frontend import run_fzf, run_rofi, run_via_socket
 
 import socket
 import json
@@ -459,7 +459,7 @@ class MenuManager:
         This method now determines the UI backend.
         If backend is "socket", it handles the network communication.
         """
-        if self.backend == "socket":
+        if self.interface == "socket":
             if not self.socket_conn:
                 print("Error: Socket connection not established for 'socket' backend.")
                 return [] # Simulate cancellation on error

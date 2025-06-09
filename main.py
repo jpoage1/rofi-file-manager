@@ -1,41 +1,124 @@
 #!/usr/bin/env python
 # main.py
-
 import argparse
+import socket
+import subprocess
+import sys
+import time
+import logging
+import signal
 
 from utils.utils import get_input_paths
 from menu_manager import MenuManager
 from state.state import State
 from pathlib import Path
 from state.workspace import Workspace
-import logging
+from menu_manager.interface import run_socket_client, run_socket_server, run_cli_app
 
-def main(state):
-    pass
+def get_free_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
 
-def get_args():
-    parser = argparse.ArgumentParser(description="Manage workspace state")
-    parser.add_argument("--workspace-file", default="workspace.json")
-    parser.add_argument("--cwd", default=None)
-    parser.add_argument("--interface", default=None)
-    parser.add_argument("paths", nargs="*")
-    return parser.parse_args()
+def terminate_process(proc, name, timeout=5):
+    if proc.poll() is None:  # Process still running
+        logging.info(f"Terminating {name} (pid={proc.pid})")
+        proc.terminate()
+        try:
+            proc.wait(timeout=timeout)
+            logging.info(f"{name} exited gracefully")
+        except subprocess.TimeoutExpired:
+            logging.warning(f"{name} did not exit in {timeout}s; killing")
+            proc.kill()
+            proc.wait()
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     workspace = Workspace(
         json_file=args.workspace_file,
         paths=args.paths,
         cwd=args.cwd
     )
-    state = State(workspace, interface=args.interface)
+    state = State(workspace)
     workspace.setState(state)
 
-    # Initial auto-save check happens after workspace.setState(state)
-    # This also handles the case where auto-save was ON from a previous session AND we are dirty.
     if state.is_dirty and state.auto_save_enabled:
         logging.info("[INFO] Performing initial auto-save due to dirty state and auto-save being enabled.")
-        state.autoSave(state.workspace.save) # This will save and clear is_dirty
+        state.autoSave(state.workspace.save)
 
-    menu_manager = MenuManager(state, args.interface)
-    menu_manager.main_loop()
+    if args.interface == 'socket':
+        port = args.port or get_free_port()
+        host = args.host or '127.0.0.1'
+
+        common_args = [
+            "--host", host,
+            "--port", str(port),
+            "--workspace-file", args.workspace_file,
+            *args.paths
+        ]
+
+        if args.cwd:
+            common_args.extend(["--cwd", args.cwd])
+
+        server_proc = subprocess.Popen([
+            sys.executable, __file__,
+            "--interface", "socket-server",
+            *common_args
+        ])
+
+        time.sleep(1)
+
+        if args.frontend:
+            common_args.extend(["--frontend", args.frontend])
+        client_proc = subprocess.Popen([
+            sys.executable, __file__,
+            "--interface", "socket-client",
+            *common_args
+        ])
+
+        def cleanup(signum=None, frame=None):
+            terminate_process(client_proc, "Client")
+            terminate_process(server_proc, "Server")
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, cleanup)
+        signal.signal(signal.SIGTERM, cleanup)
+
+        try:
+            client_proc.wait()
+        finally:
+            cleanup()
+
+        return
+
+    # Normal single instance mode
+    menu_manager = MenuManager(state, args.interface, args.frontend)
+    menu_manager.host = '127.0.0.1'
+    if hasattr(args, 'port') and args.port:
+        menu_manager.port = int(args.port)
+    else:
+        menu_manager.port = 12345
+
+    if args.interface == "socket-server":
+        logging.info("[INFO] Starting application in server mode (interface: socket).")
+        run_socket_server(menu_manager)
+    elif args.interface == "socket-client":
+        logging.info("[INFO] Starting application in client mode (interface: socket-client).")
+        run_socket_client(menu_manager)
+    else:
+        logging.info("[INFO] Starting application in CLI mode.")
+        run_cli_app(menu_manager)
+
+def get_args():
+    parser = argparse.ArgumentParser(description="Manage workspace state")
+    parser.add_argument("--workspace-file", default="workspace.json")
+    parser.add_argument("--cwd", default=None)
+    parser.add_argument("--frontend", default=None, help="Available frontends: fzf rofi cli")
+    parser.add_argument("--interface", default=None, help="Interface type: 'socket-server' for stand-alone server, 'socket-client' for stand-alone client, 'socket' to launch both, or 'cli' for console.")
+    parser.add_argument("--host", help="Host for socket communication")
+    parser.add_argument("--port", type=int, help="Port number for socket communication")
+    parser.add_argument("paths", nargs="*")
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    main()
