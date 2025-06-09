@@ -3,8 +3,8 @@ from pathlib import Path
 
 def resolve_path_and_inode(path: Path):
     try:
-        canonical = path.resolve()
-        stat_info = canonical.stat()
+        stat_info = path.stat()
+        canonical = path if path.is_absolute() else path.resolve(strict=False)
         return canonical, (stat_info.st_dev, stat_info.st_ino)
     except Exception:
         return None, None
