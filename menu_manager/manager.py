@@ -9,7 +9,7 @@ from .menu_workspace import WorkspaceActions
 from .menu_clipboard import ClipboardActions
 import re
 import logging
-from menu_manager.frontend import run_fzf, run_rofi, run_cli_selector, run_via_socket
+from menu_manager.interface import selector, run_via_socket
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -58,26 +58,12 @@ class MenuManager(WorkspaceActions, ClipboardActions):
             'Remove from clipboard queue': self.remove_from_clipboard,
         }
 
-
-    def selector(self, *args, **kwargs):
-        if self.interface == "socket-server" or self.interface == "sockets-server":
-            return run_via_socket(self.socket_conn, *args, **kwargs)
-        
-        frontend = self.frontend
-        if frontend == "fzf":
-             return run_fzf(*args, **kwargs)
-        elif frontend == "rofi":
-             return run_rofi(*args, **kwargs)
-        elif frontend == "cli":
-             return run_cli_selector(*args, **kwargs)
-        else:
-             print(f"No selector found for interface {self.interface} with frontend {self.frontend}")
-             exit(1)
-        
     def run_selector(self, entries, prompt, multi_select=False, text_input=True):
         try:
-            print("Using selector")
-            selected_option = self.selector(entries, prompt, multi_select, text_input)
+            if self.interface == "socket-server" or self.interface == "sockets-server":
+                selected_option = run_via_socket(self.socket_conn, entries, prompt, multi_select, text_input)
+            else:
+                selected_option = selector(self.frontend, entries, prompt, multi_select, text_input)
             return selected_option
         except EOFError:
             logging.info("[MenuManager] EOF received, exiting CLI.")

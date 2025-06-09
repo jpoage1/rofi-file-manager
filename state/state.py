@@ -1,11 +1,10 @@
 # state.py
 from pathlib import Path
-import json
 from state.workspace import Workspace
 from clipboard.clipboard import Clipboard
 from search_config import SearchConfig
 import logging
-import threading
+
 class State:
     def __init__(self, workspace=None, clipboard=None, root_dir=None):
         self.use_gitignore = True

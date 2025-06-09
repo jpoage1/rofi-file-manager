@@ -2,18 +2,24 @@ import socket
 import json
 import logging
 from menu_manager.payload import send_message, recv_message
-def run_socket_client(manager):
+from menu_manager.frontend import run_fzf, run_rofi, run_cli_selector
+from menu_manager.payload import get_timestamp
+
+def run_socket_client(host, port, frontend):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.connect((manager.host, manager.port))
-            manager.socket_conn = s
+            print(f"Client connecting to {host}:{port}")
+            print(f"Client connecting at {get_timestamp()}")
+            s.connect((host, port))
+            print(f"Client connected at {get_timestamp()}")
             while True:
                 data = recv_message(s, 'client')
                 if not data:
                     print("No data received, exiting")
                     break
                 args = json.loads(data)
-                selection = manager.run_selector(
+                selection = selector(
+                    frontend, 
                     args['entries'],
                     args['prompt'],
                     args['multi_select'],
@@ -22,16 +28,16 @@ def run_socket_client(manager):
                 send_message(s, json.dumps({"selection": selection}), 'client')
         except Exception as e:
             print(f"[Client] Error: {e}")
-        finally:
-            manager.socket_conn = None
 
 def run_socket_server(manager):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind((manager.host, manager.port))
             s.listen()
-            print(f"Listening at {manager.host}:{manager.port}")
+            print("Server Listening...")
             conn, _ = s.accept()
+            print(f"Accepting connections at {manager.host}:{manager.port}")
+            print(f"Server Listening at {get_timestamp()}")
             with conn:
                 manager.socket_conn = conn
                 def send(msg): send_message(conn, msg)
@@ -62,3 +68,41 @@ def run_cli_app(manager):
                 logging.warning(f"[MenuManager] Invalid selection: {selection}. Please try again.")
     else:
         logging.info("[MenuManager] main_loop is not active for socket interfaces; socket functions handle the loop.")
+
+
+
+def selector(frontend, *args, **kwargs):
+    if frontend == "fzf":
+        return run_fzf(*args, **kwargs)
+    elif frontend == "rofi":
+        return run_rofi(*args, **kwargs)
+    elif frontend == "cli":
+        return run_cli_selector(*args, **kwargs)
+    else:
+        print(f"No selector found for {frontend}")
+        exit(1)
+
+
+def run_via_socket(conn, entries, prompt, multi_select=False, text_input=True):
+    
+    menu_data_to_send = {
+        "prompt": prompt,
+        "entries": entries,
+        "multi_select": multi_select,
+        "text_input": text_input
+    }
+    print("Sending socket packet", menu_data_to_send)
+    send_message(conn, json.dumps(menu_data_to_send), 'server')
+
+    data = recv_message(conn, 'server')
+    if not data:
+        return []
+    try:
+        selection_data = json.loads(data)
+        print("Received pacet: ", selection_data)
+        selection = selection_data.get("selection", [])
+        if isinstance(selection, list):
+            return selection
+        return [selection]
+    except (json.JSONDecodeError, KeyError):
+        return []
