@@ -7,6 +7,11 @@ from typing import List, Set
 import hashlib
 import logging
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import threading
+
+from menu_manager.watcher import CacheUpdater
 
 from filters.gitignore import is_ignored_by_stack
 from filters.path_utils import resolve_path_and_inode
@@ -349,6 +354,9 @@ class Workspace:
         end = time.perf_counter()
         from menu_manager.payload import write_log
         write_log(f"build_cache: Execution time: {end - start:.6f} seconds")
+
+        self.watcher = self.start_file_watcher()
+
         
     def _determine_initial_dirty_state(self):
             """
@@ -466,3 +474,19 @@ class Workspace:
             print("State not initialized")
             exit(1)
         return self.state
+    
+    def update_file_watcher(self):
+        self.watcher.stop()
+        self.watcher.join()  # ensure thread terminates
+        self.watcher = start_file_watcher()
+    
+    def start_file_watcher(self):
+        event_handler = CacheUpdater(self.state.get_cache())
+        observer = Observer()
+        root_paths = list(self.state.workspace.list())
+        for root_path in root_paths:
+            observer.schedule(event_handler, str(root_path), recursive=True)
+        observer_thread = threading.Thread(target=observer.start, daemon=True)
+        observer_thread.start()
+        return observer
+

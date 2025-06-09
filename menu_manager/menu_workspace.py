@@ -23,9 +23,11 @@ class WorkspaceActions:
         selection = self.run_selector([str(e) for e in entries], prompt="Select Files to Add", multi_select=True)
         if selection:
             self.state.workspace.add([entries[[str(e) for e in entries].index(s)] for s in selection], root_dir=root_dir)
+        self.update_file_watcher()
 
     def remove_files(self):
         entries = self.state.workspace.list()
         selection = self.run_selector([str(p) for p in entries], prompt="Select Files to Remove", multi_select=True)
         if selection:
             self.state.workspace.remove([entries[[str(e) for e in entries].index(s)] for s in selection])
+        self.update_file_watcher()
