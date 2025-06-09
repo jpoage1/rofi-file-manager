@@ -2,7 +2,6 @@
 import pathspec
 from pathlib import Path
 import logging
-
 def load_gitignore_spec(directory_path: Path):
     gitignore_path = directory_path / '.gitignore'
     if gitignore_path.exists():
@@ -10,6 +9,7 @@ def load_gitignore_spec(directory_path: Path):
             lines = f.read().splitlines()
         return pathspec.PathSpec.from_lines('gitwildmatch', lines)
     return None
+
 def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
     """
     Checks if a given path is ignored by any of the gitignore specifications in the stack.
@@ -17,7 +17,7 @@ def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
     """
     
     # Use canonical_path for consistent matching
-    canonical_path = path.resolve() 
+    canonical_path = path.resolve(strict=False) # strict = False because the paths have already been verified
     logging.debug(f"is_ignored_by_stack: Checking CANONICAL '{canonical_path}' against {len(gitignore_specs)} specs.")
 
     for spec_obj, base_path in gitignore_specs:
@@ -55,6 +55,43 @@ def is_ignored_by_stack(path: Path, gitignore_specs: list[tuple]) -> bool:
             continue
 
     logging.debug(f"is_ignored_by_stack: '{canonical_path}' NOT ignored by any active specs.") # NEW
+    return False
+def is_ignored_by_stack2(path: Path, gitignore_specs: list[tuple]) -> bool:
+    """
+    Checks if a given path is ignored by any of the gitignore specifications in the stack.
+    Each spec in the stack is a tuple (PathSpec object, base_directory_Path object).
+    """
+    try:
+        canonical_path = path.resolve(strict=False)
+    except Exception as e:
+        logging.debug(f"Failed to resolve path '{path}': {e}")
+        return False
+
+    logging.debug(f"is_ignored_by_stack: Checking CANONICAL '{canonical_path}' against {len(gitignore_specs)} specs.")
+
+    # Pre-filter applicable specs using is_relative_to (Python 3.9+)
+    applicable_specs = [
+        (spec_obj, base_path)
+        for spec_obj, base_path in gitignore_specs
+        if canonical_path.is_relative_to(base_path)
+    ]
+
+    for spec_obj, base_path in applicable_specs:
+        rel_path = canonical_path.relative_to(base_path)
+        rel_path_str = str(rel_path)
+
+        matched_as_is = spec_obj.match_file(rel_path_str)
+        logging.debug(f"is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}': Matched={matched_as_is}")
+        if matched_as_is:
+            return True
+
+        if canonical_path.is_dir() and not rel_path_str.endswith('/'):
+            matched_with_slash = spec_obj.match_file(rel_path_str + '/')
+            logging.debug(f"is_ignored_by_stack:   - For spec from '{base_path}', testing '{rel_path_str}/': Matched={matched_with_slash} (as directory)")
+            if matched_with_slash:
+                return True
+
+    logging.debug(f"is_ignored_by_stack: '{canonical_path}' NOT ignored by any active specs.")
     return False
 
 def update_gitignore_specs(entry: Path, active_gitignore_specs: list[tuple[pathspec.PathSpec, Path]]):

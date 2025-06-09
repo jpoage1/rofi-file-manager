@@ -28,6 +28,7 @@ class State:
         self.search_config = SearchConfig()
         self.is_dirty: bool = False # True if there are unsaved changes
         self.auto_save_enabled: bool = False # Controls if changes are auto-saveds
+        self.cache = None
 
     def push_state(self):
         snapshot = {
@@ -143,3 +144,9 @@ class State:
         
         self.auto_save_enabled = config_dict.get("auto_save_enabled", False) # Default to False
         logging.debug(f"Applied State config from JSON: auto_save_enabled={self.auto_save_enabled}")
+
+    def get_cache(self):
+        if not self.cache:
+            print("Cache has not been set")
+            exit(1)
+        return self.cache

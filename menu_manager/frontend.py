@@ -36,9 +36,9 @@ def run_via_socket(conn, entries, prompt, multi_select=False, text_input=True):
         "text_input": text_input
     }
     print("Sending socket packet", menu_data_to_send)
-    send_message(conn, json.dumps(menu_data_to_send))
+    send_message(conn, json.dumps(menu_data_to_send), 'server')
 
-    data = recv_message(conn)
+    data = recv_message(conn, 'server')
     if not data:
         return []
     try:

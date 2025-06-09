@@ -8,7 +8,7 @@ def run_socket_client(manager):
             s.connect((manager.host, manager.port))
             manager.socket_conn = s
             while True:
-                data = recv_message(s)
+                data = recv_message(s, 'client')
                 if not data:
                     print("No data received, exiting")
                     break
@@ -19,7 +19,7 @@ def run_socket_client(manager):
                     args['multi_select'],
                     args['text_input']
                 )
-                send_message(s, json.dumps({"selection": selection}))
+                send_message(s, json.dumps({"selection": selection}), 'client')
         except Exception as e:
             print(f"[Client] Error: {e}")
         finally:
@@ -35,7 +35,7 @@ def run_socket_server(manager):
             with conn:
                 manager.socket_conn = conn
                 def send(msg): send_message(conn, msg)
-                def recv(): return recv_message(conn)
+                def recv(): return recv_message(conn, 'server')
                 manager.send = send
                 manager.recv = recv
                 result = manager.navigate_menu(manager.menu_structure_callable)

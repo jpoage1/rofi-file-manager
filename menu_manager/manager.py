@@ -3,14 +3,14 @@ from filesystem.filesystem import list_files, list_directories
 from core.core import edit_files
 from state.search_options import SearchOptions
 from filters.main import get_entries
-from filesystem.tree_utils import build_tree, flatten_tree
+# from filesystem.tree_utils import build_tree, flatten_tree
 
 from .menu_workspace import WorkspaceActions
 from .menu_clipboard import ClipboardActions
 import re
 import logging
 from menu_manager.frontend import run_fzf, run_rofi, run_cli_selector, run_via_socket
-import time
+
 # logging.basicConfig(level=logging.DEBUG)
 
 class MenuManager(WorkspaceActions, ClipboardActions):
@@ -60,7 +60,7 @@ class MenuManager(WorkspaceActions, ClipboardActions):
 
 
     def selector(self, *args, **kwargs):
-        if self.interface == "socket-server":
+        if self.interface == "socket-server" or self.interface == "sockets-server":
             return run_via_socket(self.socket_conn, *args, **kwargs)
         
         frontend = self.frontend
@@ -117,27 +117,18 @@ class MenuManager(WorkspaceActions, ClipboardActions):
 
   
     def search_workspace(self):
-        entries = get_entries(self.state)
-        entries_str = [str(e) for e in entries]
-
-        # potential performance reduction:
+        import time
         start = time.perf_counter()
-        # Begin performance test
-        tree = build_tree(entries_str)
-        choices = flatten_tree(tree)
-        # End performance test
+        entries = self.state.get_cache()
         end = time.perf_counter()
-        print("# TEST choices = flatten_tree(tree)")
-        print(f"## Execution time: {end - start:.6f} seconds")
+        from menu_manager.payload import write_log
+        write_log(f"get_cache: Execution time: {end - start:.6f} seconds")
 
-        # start = time.perf_counter()
-        # # Begin performance test
-        # choices = sorted(entries_str) # Potential performance improvement
-        # # End performance test
-        # end = time.perf_counter()
-        # print("# TEST canonical_path, inode_key = resolve_path_and_inode(entry)")
-        # print(f"## Execution time: {end - start:.6f} seconds")
-        # print()
+        entries_str = [str(e) for e in entries]
+        # These are redundant, but may become useful if future features require it
+        # tree = build_tree(entries_str) # Create a directory tree
+        # choices = flatten_tree(tree)
+        choices = sorted(entries_str)
 
         while True:
             selection = self.run_selector(choices, prompt="Workspace Files")
