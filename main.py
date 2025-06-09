@@ -9,7 +9,6 @@ import logging
 import signal
 from threading import Thread
 
-import errno
 
 from utils.utils import get_input_paths
 from menu_manager import MenuManager
@@ -124,17 +123,6 @@ def spawn_socket_process(interface, common_args):
     ])
 
 
-def wait_for_server(host, port, timeout=2.0, interval=0.05):
-    start = time.time()
-    while time.time() - start < timeout:
-        try:
-            with socket.create_connection((host, port), timeout=interval):
-                return True
-        except OSError as e:
-            if e.errno not in (errno.ECONNREFUSED, errno.EHOSTUNREACH):
-                raise
-        time.sleep(interval)
-    raise TimeoutError(f"Server did not become ready at {host}:{port} within {timeout} seconds.")
 
 def run_dual_socket_mode(args):
     common_args = [
@@ -151,8 +139,6 @@ def run_dual_socket_mode(args):
     from menu_manager.payload import get_timestamp
     print(f"Server starting at {get_timestamp()}")
     server_proc = spawn_socket_process("socket-server", common_args)
-    time.sleep(1)
-    wait_for_server(args.host, args.port)
     client_proc = spawn_socket_process("socket-client", common_args)
 
     def cleanup(signum=None, frame=None):
