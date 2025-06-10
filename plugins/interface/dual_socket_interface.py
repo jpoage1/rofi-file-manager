@@ -33,11 +33,11 @@ def terminate_process(proc, name, timeout=5):
             proc.kill()
             proc.wait()
 
-def spawn_socket_process(interface, common_args):
+def spawn_socket_process(interface, args):
     return subprocess.Popen([
         sys.executable, __file__,
         "--interface", interface,
-        *common_args
+        *args
     ])
 
 def run_dual_socket_mode(args):
@@ -50,6 +50,7 @@ def run_dual_socket_mode(args):
         "--host", args.host,
         "--port", str(args.port),
         "--workspace-file", args.workspace_file,
+        "--timeout", str(args.timeout),
         *args.paths
     ]
 
@@ -59,11 +60,11 @@ def run_dual_socket_mode(args):
     # Arguments specifically for the server
     # The server always needs '--frontend=socket'
     server_args = list(base_args) # Start with a copy of base_args
-    server_args.extend(["--frontend", "socket"])
 
     # Arguments specifically for the client
     # The client needs '--frontend' only if it was originally provided in args.frontend
     client_args = list(base_args) # Start with another copy of base_args
+    client_args.extend(["--retry-interval", str(args.retry_interval)])
     if args.frontend:
         client_args.extend(["--frontend", args.frontend])
 
@@ -90,8 +91,8 @@ def run_dual_socket_mode(args):
     finally:
         cleanup()
 
-def interface(config):
-    return run_dual_socket_mode(config)
+def interface(args):
+    return run_dual_socket_mode(args)
 
 
 
