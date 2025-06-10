@@ -16,6 +16,29 @@ class MenuEntry:
     
     def indexedLabel(self, i):
         return f"{i}: {self.label}"
+class SeperatorEntry(MenuEntry):
+    pass
+
+class TextEntry(MenuEntry):
+    pass
+
+class BinaryToggleEntry(MenuEntry):
+    def __init__(self, label: str, attr, state):
+        self.base_label = label
+        self.attr = attr
+        self.state = state
+        self.label = self.toggle_label()
+
+    def toggle_status(self):
+        return 'ON' if getattr(self.state, self.attr) else 'OFF'
+    
+    def toggle_label(self):
+        return f"{self.base_label}: {self.toggle_status()}"
+
+    def action(self):
+        setattr(self.state, self.attr, not getattr(self.state, self.attr))
+        self.label = self.toggle_label()
+
 
 class MenuEntries(MenuEntry):
     def __init__(self, children):

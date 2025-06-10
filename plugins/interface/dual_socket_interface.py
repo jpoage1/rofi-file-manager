@@ -64,7 +64,8 @@ def run_dual_socket_mode(args):
     # Arguments specifically for the client
     # The client needs '--frontend' only if it was originally provided in args.frontend
     client_args = list(base_args) # Start with another copy of base_args
-    client_args.extend(["--retry-interval", str(args.retry_interval)])
+    if args.retry_interval:
+        client_args.extend(["--retry-interval", str(args.retry_interval)])
     if args.frontend:
         client_args.extend(["--frontend", args.frontend])
 

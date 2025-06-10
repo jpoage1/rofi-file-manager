@@ -6,7 +6,8 @@ import pathlib
 
 from core.plugin_base import WorkspacePlugin
 
-def load_menu_plugins(menu, state, plugin_dir="plugins"):
+def load_menu_plugins(menu, state):
+    plugin_dir = pathlib.Path(__file__).parent.parent / "plugins/menu"
     plugins = []
     for file in os.listdir(plugin_dir):
         if file.endswith(".py") and not file.startswith("_"):
