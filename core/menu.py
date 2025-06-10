@@ -7,6 +7,7 @@ from core.plugins import load_menu_plugins
 
 # logging.basicConfig(level=logging.DEBUG)
 
+from core.plugin_base import SubMenu
 
 class MenuManager():
     def __init__(self, state, args):
@@ -18,25 +19,60 @@ class MenuManager():
         self.port = int(getattr(args, 'port', 65432))
 
         # self.search_options = SearchOptions(self, state)
-        self.menu_structure_callable = self._get_main_menu_structure
         self.load_plugins()
-        self.main_menu()
+        self.main_loop()
 
     def load_plugins(self):
         self.plugins = load_menu_plugins(self, self.state)
 
-    def main_menu(self):
-        return self.navigate_menu_by_index(self._get_main_menu_structure)
+    # def main_menu(self):
+    #     return self.navigate_menu_by_index(self._get_main_menu_structure)
     
-    def _get_main_menu_structure(self):
-        menu_entries = []
+    def main_menu(self):
+        from core.plugin_base import MenuEntry, MenuEntries
+        entries = []
         for plugin in self.plugins:
-            entries = plugin._main_menu_entry()
-            if isinstance(entries, list):
-                menu_entries.extend(entries)
-            else:
-                menu_entries.append(entries)
-        return menu_entries
+            entry = plugin._build_menu()
+            if not isinstance(entry, MenuEntry):
+                raise TypeError(MenuEntry)
+            entries.append(entry)
+        return MenuEntries(entries)
+    def main_loop(self):
+        from core.plugin_base import MenuEntry, PathEntry, MenuEntries
+        stack = [self.main_menu()]
+        i = 1
+        while 0 < len(stack):
+            current_stack = stack[-1]
+            indexed_entries = []
+            if isinstance(current_stack, MenuEntries):
+                for entry in current_stack.children:
+                    indexed_entries.append(entry.indexedLabel(len(indexed_entries)+1))
+                choice = self.run_selector(indexed_entries, "Main Menu")
+            elif isinstance(current_stack, PathEntry):
+                return
+            elif isinstance(current_stack, MenuEntry):
+                choice = current_stack.action()
+                
+                pass
+            # No choice made
+            if not choice:
+                stack.pop()
+                continue
+            indices = [int(line.split(":", 1)[0]) for line in choice]
+            info = [(int(line.split(":", 1)[0]), line.split(":", 1)[1].strip()) for line in choice]
+            # Invalid selection
+            if len(indices) < 1:
+                continue
+            index = indices[0]-1
+            next_stack = current_stack.get(index)
+            if not isinstance(next_stack, MenuEntry):
+                raise AttributeError(MenuEntry)
+            if isinstance(next_stack, PathEntry):
+                pass
+            stack.append(next_stack)
+            
+            # result = indexed_entries[indices[0]].action()
+        # End While
 
     def run_selector(self, entries, prompt, multi_select=False, text_input=True):
         from core.plugins import load_selector_plugins
@@ -99,7 +135,8 @@ class MenuManager():
             if not current_menu:
                 return
             # Detect format: list-based (with dicts) or dict-based
-            if isinstance(current_menu, list):
+            print(isinstance(current_menu, SubMenu))
+            if isinstance(current_menu, SubMenu):
                 entries = [item["name"] for item in current_menu if isinstance(item, dict) and "name" in item]
             elif isinstance(current_menu, dict):
                 entries = list(current_menu.keys())

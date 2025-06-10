@@ -10,8 +10,7 @@ def add_arguments(parser):
 def run_cli_interface(manager):
     # This loop is primarily for non-socket (CLI) interfaces
     while True:
-        menu = manager.menu_structure_callable()
-        print(menu)
+        menu = manager.main_menu()
         exit(0)
         entries = list(menu.keys())
         selection = manager.run_selector(entries, "Select an option", False, False)

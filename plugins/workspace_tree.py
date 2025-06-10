@@ -9,6 +9,8 @@ from core.plugin_base import WorkspacePlugin
 
 # logging.basicConfig(level=logging.DEBUG)
 
+from core.plugin_base import SubMenu
+
 class WorkspaceTree(WorkspacePlugin):
     priority = 20
     
@@ -17,17 +19,15 @@ class WorkspaceTree(WorkspacePlugin):
         self.state.update({
             # "workspace_files": set(),
         })
-    
-    def _main_menu_entry(self):
-        return {
-            "name": "Workspace Tree",
-            "action": self._build_options,
-        }
-    
+
+    def _build_menu(self) -> SubMenu:
+        from core.plugin_base import MenuEntry
+        return MenuEntry("Workspace Tree", self.browse_workspace)
+
     def browse_workspace(self):
         while True:
             entries = sorted(str(p) for p in self.state.workspace.list())
-            choice = self.run_selector(entries, prompt="Select Root")
+            choice = self.menu.run_selector(entries, prompt="Select Root")
             if not choice:
                 return
             selected_path = Path(choice[0])
@@ -47,7 +47,7 @@ class WorkspaceTree(WorkspacePlugin):
                 entries = []
 
             display = [f"{e.name}/" if e.is_dir() else e.name for e in entries]
-            choice = self.run_selector(display, prompt=str(cur_path))
+            choice = self.menu.run_selector(display, prompt=str(cur_path))
             if not choice:
                 if stack:
                     cur_path = stack.pop()
@@ -63,17 +63,10 @@ class WorkspaceTree(WorkspacePlugin):
             else:
                 edit_files([next_path])
 
-    def get_root_dir(self) -> Path:
-        root = self.state.root_dir or Path(".")
-        if isinstance(root, str):
-            root = Path(root)
-        self.state.root_dir = root.resolve()
-        return self.state.root_dir
-
     def traverse_directory(self):
         while True:
-            dirs = list_directories(self.get_root_dir())
-            selection = self.run_selector([str(d) for d in dirs], prompt="Select Directory")
+            dirs = list_directories(self.state.get_root_dir())
+            selection = self.menu.run_selector([str(d) for d in dirs], prompt="Select Directory")
             if not selection:
                 return
             self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]

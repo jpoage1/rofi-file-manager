@@ -1,5 +1,7 @@
 # filesystem/filesystem.py
 from pathlib import Path
+# def list_directories(self) -> Set[Path]:
+#         return {p for p in self.list() if p.is_dir()}
 
 def list_directories(base_dir):
     base = Path(base_dir)

@@ -147,3 +147,10 @@ class State:
     def update(self, values: dict):
         for key, value in values.items():
             setattr(self, key, value)
+
+    def get_root_dir(self) -> Path:
+        root = self.root_dir or Path(".")
+        if isinstance(root, str):
+            root = Path(root)
+        self.root_dir = root.resolve()
+        return self.root_dir

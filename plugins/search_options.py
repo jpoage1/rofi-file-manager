@@ -1,5 +1,5 @@
 # plugins/search_options.py
-from core.plugin_base import WorkspacePlugin
+from core.plugin_base import WorkspacePlugin, SubMenu, MenuEntry, SelectorHelper, ExpansionDepthHelper, RegexPromptHelper
 
 class SearchOptions(WorkspacePlugin):
     priority = 40
@@ -19,28 +19,26 @@ class SearchOptions(WorkspacePlugin):
             "search_files_only": False,
             "show_dirs": True,
         })
-    
-    def _main_menu_entry(self):
-        return {
-            "name": "Search Options",
-            "action": self._build_options,
-        }
-    
-    def _build_options(self):
-        return [
-            f"Use .gitignore: {'ON' if self.state.use_gitignore else 'OFF'}",
-            f"Include dotfiles: {'ON' if self.state.include_dotfiles else 'OFF'}",
-            f"Directory expansion: {'ON' if self.state.directory_expansion else 'OFF'}",
-            f"Expansion recursion: {'ON' if self.state.expansion_recursion else 'OFF'}",
-            f"Expansion depth: {self.state.expansion_depth if self.state.expansion_depth is not None else 'Unlimited'}",
-            f"Regex mode: {'ON' if self.state.regex_mode else 'OFF'}",
-            f"Regex pattern: {self.state.regex_pattern or '<empty>'}",
-            "---",
-            "Reset to defaults",
-            "Exit"
+
+    def _build_menu(self) -> SubMenu:
+        options = [
+            MenuEntry(f"Use .gitignore: {'ON' if self.state.use_gitignore else 'OFF'}"),
+            MenuEntry(f"Include dotfiles: {'ON' if self.state.include_dotfiles else 'OFF'}"),
+            MenuEntry(f"Directory expansion: {'ON' if self.state.directory_expansion else 'OFF'}"),
+            MenuEntry(f"Expansion recursion: {'ON' if self.state.expansion_recursion else 'OFF'}"),
+            MenuEntry(f"Expansion depth: {self.state.expansion_depth if self.state.expansion_depth is not None else 'Unlimited'}"),
+            MenuEntry(f"Regex mode: {'ON' if self.state.regex_mode else 'OFF'}"),
+            MenuEntry(f"Regex pattern: {self.state.regex_pattern or '<empty>'}"),
+            MenuEntry("---"),
+            MenuEntry("Reset to defaults", action=self.reset_defaults)
         ]
+        return SubMenu("Search Options", options)
     
     def run_menu(self):
+        selector = SelectorHelper(self.menu.run_selector)
+        regex_prompt = RegexPromptHelper(self.menu.run_selector)
+        depth_prompt = ExpansionDepthHelper(self.menu.run_selector)
+
         options = self._build_options()
         while True:
             choice = self.menu.run_selector(options, "Search Options (toggle or edit)", multi_select=False)
@@ -48,26 +46,13 @@ class SearchOptions(WorkspacePlugin):
                 break
             choice = choice[0]
 
-            if choice == "Exit":
-                break
-            elif choice == "Reset to defaults":
+            if choice == "Reset to defaults":
                 self.reset_defaults()
             elif choice.startswith("Regex pattern"):
-                new_pattern = self.menu.run_selector([], "Enter regex pattern", multi_select=False)
-                if new_pattern is not None:
-                    self.state.regex_pattern = new_pattern[0] if new_pattern else ""
+                self.state.regex_pattern = regex_prompt.prompt()
             elif choice.startswith("Expansion depth"):
-                new_depth = self.menu.run_selector([], "Enter max recursion depth (empty for unlimited)", multi_select=False)
-                if new_depth is not None:
-                    val = new_depth[0].strip()
-                    if val == "" or val.lower() in ("none", "unlimited"):
-                        self.state.expansion_depth = None
-                    else:
-                        try:
-                            depth_int = int(val)
-                            self.state.expansion_depth = max(0, depth_int)
-                        except ValueError:
-                            pass
+                depth = depth_prompt.prompt()
+                self.state.expansion_depth = depth
             else:
                 self.toggle_option(choice)
 

@@ -10,7 +10,7 @@ class ClipboardActions:
             self.state.clipboard.add_files([entries[[str(e) for e in entries].index(s)] for s in selection])
 
     def add_cwd_to_clipboard(self):
-        entries = list_files(self.get_root_dir())
+        entries = list_files(self.state.get_root_dir())
         selection = self.run_selector([str(e) for e in entries], prompt="Select CWD Files", multi_select=True)
         if selection:
             self.state.clipboard.add_files([entries[[str(e) for e in entries].index(s)] for s in selection])
