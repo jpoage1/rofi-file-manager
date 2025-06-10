@@ -1,4 +1,4 @@
-# core/workspace.py
+# state/workspace.py
 import json
 import fcntl
 from pathlib import Path
@@ -10,7 +10,7 @@ import logging
 from watchdog.observers import Observer
 import threading
 
-from menu_manager.watcher import CacheUpdater
+from core.watcher import CacheUpdater
 
 from filters.gitignore import is_ignored_by_stack
 from filters.path_utils import resolve_path_and_inode

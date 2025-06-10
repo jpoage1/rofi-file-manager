@@ -1,4 +1,4 @@
-# state/state.py
+# core/state.py
 from pathlib import Path
 from state.workspace import Workspace
 from clipboard.clipboard import Clipboard
@@ -143,3 +143,7 @@ class State:
         
         self.auto_save_enabled = config_dict.get("auto_save_enabled", False) # Default to False
         logging.debug(f"Applied State config from JSON: auto_save_enabled={self.auto_save_enabled}")
+
+    def update(self, values: dict):
+        for key, value in values.items():
+            setattr(self, key, value)

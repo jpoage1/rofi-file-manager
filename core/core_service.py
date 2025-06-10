@@ -1,3 +1,4 @@
+# core/core_service.py
 # Simple example: server manages workspace state, broadcasts updates via UNIX socket.
 # Client connects, receives updates, sends commands.
 # Plugins can run on server or client side.

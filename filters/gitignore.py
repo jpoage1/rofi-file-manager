@@ -1,4 +1,4 @@
-# gitignore.py
+# filters/gitignore.py
 import pathspec
 from pathlib import Path
 import logging

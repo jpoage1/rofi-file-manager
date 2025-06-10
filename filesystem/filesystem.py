@@ -1,4 +1,4 @@
-# filesystem.py
+# filesystem/filesystem.py
 from pathlib import Path
 
 def list_directories(base_dir):

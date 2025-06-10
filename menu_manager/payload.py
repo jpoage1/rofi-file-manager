@@ -1,4 +1,4 @@
-# payload.py
+# menu_manager/payload.py
 import struct
 import time
 from datetime import datetime

@@ -1,4 +1,4 @@
-# In filters/filtering.py
+# filters/filtering.py
 import logging
 
 

@@ -1,10 +1,7 @@
-# core.py
+# core/utils.py
 
 import subprocess
                
-def filter_file_entries(selection):
-    return [item for item in selection if not item.startswith("[") and item != "---"]
-
 def edit_files(files, editor="nvim"):
     if not files:
         return

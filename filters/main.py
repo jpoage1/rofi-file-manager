@@ -1,3 +1,4 @@
+# filters/main.py
 from pathlib import Path
 from filters.gitignore import update_gitignore_specs, is_ignored_by_stack, load_gitignore_spec
 from filters.path_utils import resolve_path_and_inode, list_directory_children

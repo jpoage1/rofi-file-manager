@@ -1,6 +1,6 @@
+# menu_manager/manager.py
 from pathlib import Path
-from filesystem.filesystem import list_files, list_directories
-from core.core import edit_files
+from menu_manager.core import edit_files
 from state.search_options import SearchOptions
 from filters.main import get_entries
 # from filesystem.tree_utils import build_tree, flatten_tree

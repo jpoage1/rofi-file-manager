@@ -1,31 +1,7 @@
-# menu_manager/interface.py
-import subprocess
-import json
+# plugins/interface/cli_interface.py
 import logging 
-from menu_manager.payload import send_message, recv_message
 
-def run_fzf(entries, prompt, multi_select=False, text_input=True):
-    cmd = ["fzf", "--prompt", prompt + ": "]
-    if multi_select:
-        cmd.append("--multi")
-    if not text_input:
-        cmd.append("--no-sort")
-    proc = subprocess.run(cmd, input="\n".join(entries), text=True, capture_output=True)
-    if proc.returncode != 0:
-        return []
-    result = proc.stdout.strip()
-    return result.splitlines() if multi_select else [result] if result else []
-
-
-def run_rofi(entries, prompt, multi_select=False, text_input=True):
-    cmd = ["rofi", "-dmenu", "-p", prompt]
-    if multi_select:
-        cmd.append("-multi-select")
-    proc = subprocess.run(cmd, input="\n".join(entries), text=True, capture_output=True)
-    if proc.returncode != 0:
-        return []
-    result = proc.stdout.strip()
-    return result.splitlines() if multi_select else [result] if result else []
+name = "cli"
 
 def run_cli_selector(entries, prompt, multi_select, text_input):
     """
@@ -84,3 +60,6 @@ def run_cli_selector(entries, prompt, multi_select, text_input):
     except Exception as e:
         logging.error(f"[MenuManager._run_cli_selector] An unexpected error occurred in CLI selector: {e}")
         return ["QUIT_SIGNAL"]
+
+def selector(entries, prompt, multi_select, text_input):
+    return run_cli_selector(entries, prompt, multi_select, text_input)

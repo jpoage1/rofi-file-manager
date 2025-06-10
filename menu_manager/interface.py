@@ -60,7 +60,7 @@ def run_socket_server(manager):
                 def recv(): return recv_message(conn, 'server')
                 manager.send = send
                 manager.recv = recv
-                result = manager.navigate_menu(manager.menu_structure_callable)
+                result = manager.main_menu()
                 if result in ['EXIT_SIGNAL']:
                     return
 

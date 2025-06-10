@@ -1,4 +1,4 @@
-# menu_manager.hash
+# menu_manager/hash.py
 import hashlib
 
 def hash_file(path):

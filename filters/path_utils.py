@@ -1,4 +1,4 @@
-# filters/path_utils
+# filters/path_utils.py
 from pathlib import Path
 
 def resolve_path_and_inode(path: Path):

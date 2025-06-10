@@ -1,4 +1,4 @@
-# workspace_utils.py
+# state/workspace_utils.py
 from filters.filtering import matches_filters
 from filesystem.tree_utils import expand_paths
 

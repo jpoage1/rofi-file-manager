@@ -122,8 +122,6 @@ def spawn_socket_process(interface, common_args):
         *common_args
     ])
 
-
-
 def run_dual_socket_mode(args):
     common_args = [
         "--host", args.host,
@@ -191,6 +189,7 @@ def main():
         return
 
     state = configure_stateful_components(args)
+
 
     if args.interface in {"socket-server", "sockets-server"}:
         logging.info("[INFO] Starting application in server mode (interface: socket-server).")

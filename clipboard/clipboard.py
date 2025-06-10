@@ -1,3 +1,4 @@
+# clipboard/clipboard.py
 import pyperclip
 from pathlib import Path
 def read_file_safe(path: Path) -> str:
