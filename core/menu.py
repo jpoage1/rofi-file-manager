@@ -43,8 +43,6 @@ class MenuManager():
                 for entry in current_stack.children:
                     indexed_entries.append(entry.indexedLabel(len(indexed_entries)+1))
                 choice = self.run_selector(indexed_entries, "Main Menu")
-            elif isinstance(current_stack, PathEntry):
-                return
             elif isinstance(current_stack, MenuEntry):
                 choice = current_stack.action()
                 

@@ -5,7 +5,7 @@ import logging
 import threading
 from filesystem.filesystem import list_files
 
-from core.plugin_base import WorkspacePlugin, SubMenu, MenuEntry
+from core.plugin_base import WorkspacePlugin, SubMenu, MenuEntry, TreeEntry
 # logging.basicConfig(level=logging.DEBUG)
 
 class WorkspaceManager(WorkspacePlugin):
@@ -30,7 +30,7 @@ class WorkspaceManager(WorkspacePlugin):
             " (Saved)"
         )
         options = [
-            MenuEntry("Traverse to a new directory", action=self.traverse_directory),
+            TreeEntry(self.get_root_dir(), "Traverse to a new directory"),
             MenuEntry("Add files", action=self.add_files),
             MenuEntry("Remove files", action=self.remove_files),
             MenuEntry("Generator Blacklist", action=self.manage_generator_blacklist),
@@ -206,6 +206,13 @@ class WorkspaceManager(WorkspacePlugin):
             return [p.name for p in base.iterdir() if p.is_dir()]
         except Exception:
             return []
+        
+    def _traverse_directory(base_dir):
+        base = Path(base_dir)
+        try:
+            return [p.name for p in base.iterdir() if p.is_dir()]
+        except Exception:
+            return []
 
     def traverse_directory(self):
         while True:
@@ -214,6 +221,15 @@ class WorkspaceManager(WorkspacePlugin):
             if not selection:
                 return
             self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
+
+    def traverse_directory(self):
+        while True:
+            dirs = list_directories(self.state.get_root_dir())
+            selection = self.menu.run_selector([str(d) for d in dirs], prompt="Select Directory")
+            if not selection:
+                return
+            self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
+
 
     # def add_files(self):
     #     root_dir = self.get_root_dir()

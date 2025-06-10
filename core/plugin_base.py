@@ -1,6 +1,7 @@
 from typing import Callable, List, Optional, Union
 import os
 from pathlib import Path
+import subprocess
 
 class MenuEntry:
     def __init__(self, label: str, action: Optional[Union[Callable[['MenuEntry'], None], str]] = None):
@@ -11,15 +12,19 @@ class MenuEntry:
         return {"name": self.label, "action": self._action}
 
     def action(self):
-        if callable(self._action):
-            self._action()
+        pass
     
     def indexedLabel(self, i):
         return f"{i}: {self.label}"
-class SeperatorEntry(MenuEntry):
-    pass
+    
+class VoidEntry(MenuEntry):
+    def __init__(self, label: str):
+        self.label = label
 
-class TextEntry(MenuEntry):
+    def action(self):
+        return
+
+class TextInputEntry(MenuEntry):
     pass
 
 class BinaryToggleEntry(MenuEntry):
@@ -39,7 +44,6 @@ class BinaryToggleEntry(MenuEntry):
         setattr(self.state, self.attr, not getattr(self.state, self.attr))
         self.label = self.toggle_label()
 
-
 class MenuEntries(MenuEntry):
     def __init__(self, children):
         self.children = children
@@ -57,56 +61,74 @@ class SubMenu(MenuEntries):
 
 class PathEntry(MenuEntry):
     def __init__(self, path: str, label: Optional[str] = None, action: Optional[Callable[['PathEntry'], None]] = None):
-        self._path = Path(path)
-        if action is None:
-            action = lambda self: os.system(f"${{EDITOR:-vim}} '{self._path}'")
-        label = label or self._path.name
-        super().__init__(label, action=action)
-
-    def edit(self):
-        os.system(f"${{EDITOR:-vim}} '{self._path}'")
+        self.path = Path(path)
+        label = label or self.path.name
+        super().__init__(label, action=self.action)
 
     def action(self):
-        if callable(self._action):
-            self._action(self)
+        pass
 
     def get_path(self) -> Path:
-        return self._path
+        return self.path
 
     def get_absolute_path(self) -> Path:
-        return self._path.resolve()
+        return self.path.resolve()
 
     def get_relative_path(self, start: Optional[str] = None) -> Path:
-        return self._path.relative_to(Path(start or os.getcwd()))
+        return self.path.relative_to(Path(start or os.getcwd()))
 
 
 class FileEntry(PathEntry):
-    def __init__(self, path: str, label: Optional[str] = None):
+    def __init__(self, path: str, label: Optional[str] = None, editor: str = None):
         super().__init__(path, label)
-        self._action = lambda self: self.edit()
+        self.editor = editor or os.environ.get("EDITOR", "vim")
+
+    def action(self):
+        cmd = ["xterm", "-fa", "DejaVu Sans Mono Book", "-fs", "12", "-e", self.editor, self.path]
+        subprocess.run(cmd)
+
 
 
 class ClipboardEntry(FileEntry):
     def __init__(self, path: str, label: Optional[str] = None):
         super().__init__(path, label)
-        self._action = lambda self: self.to_clipboard()
 
-    def to_clipboard(self):
+    def action(self):
         pass  # implement actual clipboard interaction
 
-
-class DirEntry(SubMenu):
+class DirEntry(PathEntry):
     def __init__(self, path: str, label: Optional[str] = None):
         label = label or os.path.basename(path)
-        children: List[MenuEntry] = []
-        for entry in sorted(os.listdir(path)):
-            full_path = os.path.join(path, entry)
-            if os.path.isdir(full_path):
-                children.append(DirEntry(full_path))
-            elif os.path.isfile(full_path):
-                children.append(FileEntry(full_path))
-        super().__init__(label, children)
 
+class TreeEntry(SubMenu):
+    def __init__(self, path: str, label: str = None, show_dirs: bool = True, show_files: bool = True ):
+        self.label = label or path
+        self.show_files = show_files
+        self.show_dirs = show_dirs
+        self.path = Path(path)
+        self.children = self.list_directories(path)
+
+    def action(self):
+        while True:
+            dirs = self.list_directories(self.get_root_dir())
+            # selection = self.menu.run_selector([str(d) for d in dirs], prompt="Select Directory")
+            # if not selection:
+            #     return
+            # self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
+
+    def list_directories(self, base_dir):
+        base = Path(base_dir)
+        children = []
+        try:
+            for p in base.iterdir():
+                if self.show_dirs and p.is_dir():
+                    children.append(TreeEntry(p.name)) 
+                elif self.show_files and p.is_file():
+                    children.append(FileEntry(p.name)) 
+            return children
+        except Exception:
+            return []
+        
 
 class ExecEntry(MenuEntry):
     def __init__(self, label: str, command: str):
@@ -125,11 +147,6 @@ class WorkspacePlugin:
 
     def _build_menu(self) -> List[MenuEntry]:
         raise NotImplementedError
-
-
-
-
-
 
 class ConfirmHelper:
     def __init__(self, run_selector):

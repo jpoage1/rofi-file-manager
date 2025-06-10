@@ -1,5 +1,5 @@
 # plugins/search_options.py
-from core.plugin_base import WorkspacePlugin, SubMenu, BinaryToggleEntry, SelectorHelper, ExpansionDepthHelper, RegexPromptHelper, TextEntry, SeperatorEntry, MenuEntry
+from core.plugin_base import WorkspacePlugin, SubMenu, BinaryToggleEntry, SelectorHelper, ExpansionDepthHelper, RegexPromptHelper, TextInputEntry, VoidEntry, MenuEntry
 
 class SearchOptions(WorkspacePlugin):
     priority = 40
@@ -28,38 +28,11 @@ class SearchOptions(WorkspacePlugin):
             BinaryToggleEntry("Expansion recursion", "expansion_recursion", self.state),
             BinaryToggleEntry("Expansion depth", "expansion_depth", self.state),
             BinaryToggleEntry("Regex mode", "regex_mode", self.state),
-            # TextEntry(f"Regex pattern: {self.state.regex_pattern or '<empty>'}"),
-            # SeperatorEntry("---"),
+            TextInputEntry(f"Regex pattern: {self.state.regex_pattern or '<empty>'}"),
+            VoidEntry("---"),
             MenuEntry("Reset to defaults", action=self.reset_defaults)
         ]
         return SubMenu("Search Options", options)
     
-    def run_menu(self):
-        selector = SelectorHelper(self.menu.run_selector)
-        regex_prompt = RegexPromptHelper(self.menu.run_selector)
-        depth_prompt = ExpansionDepthHelper(self.menu.run_selector)
-
-        options = self._build_options()
-        while True:
-            choice = self.menu.run_selector(options, "Search Options (toggle or edit)", multi_select=False)
-            if not choice:
-                break
-            choice = choice[0]
-
-            if choice == "Exit":
-                break
-            elif choice == "Reset to defaults":
-                self.reset_defaults()
-            elif choice.startswith("Regex pattern"):
-                self.state.regex_pattern = regex_prompt.prompt()
-            elif choice.startswith("Expansion depth"):
-                depth = depth_prompt.prompt()
-                self.state.expansion_depth = depth
-            else:
-                self.toggle_option(choice)
-
-            options = self._build_options()
-
-
     def reset_defaults(self):
         self.state.reset_defaults()

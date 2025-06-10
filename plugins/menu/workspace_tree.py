@@ -5,7 +5,7 @@ from pathlib import Path
 # from filesystem.tree_utils import build_tree, flatten_tree
 
 import logging
-from core.plugin_base import WorkspacePlugin
+from core.plugin_base import WorkspacePlugin, SubMenu, TreeEntry, FileEntry
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -21,53 +21,11 @@ class WorkspaceTree(WorkspacePlugin):
         })
 
     def _build_menu(self) -> SubMenu:
-        from core.plugin_base import MenuEntry
-        return MenuEntry("Workspace Tree", self.browse_workspace)
-
-    def browse_workspace(self):
-        while True:
-            entries = sorted(str(p) for p in self.state.workspace.list())
-            choice = self.menu.run_selector(entries, prompt="Select Root")
-            if not choice:
-                return
-            selected_path = Path(choice[0])
-            if selected_path.is_file():
-                edit_files([selected_path])
-            else:
-                self._browse_tree(choice[0])
-
-    def _browse_tree(self, current_dir):
-        cur_path = Path(current_dir).resolve()
-        stack = []
-
-        while True:
-            try:
-                entries = sorted(cur_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
-            except Exception:
-                entries = []
-
-            display = [f"{e.name}/" if e.is_dir() else e.name for e in entries]
-            choice = self.menu.run_selector(display, prompt=str(cur_path))
-            if not choice:
-                if stack:
-                    cur_path = stack.pop()
-                    continue
-                return
-
-            name = choice[0].rstrip("/")
-            next_path = cur_path / name
-            logging.info(next_path)
-            if next_path.is_dir():
-                stack.append(cur_path)
-                cur_path = next_path
-            else:
-                edit_files([next_path])
-
-    def traverse_directory(self):
-        while True:
-            dirs = list_directories(self.state.get_root_dir())
-            selection = self.menu.run_selector([str(d) for d in dirs], prompt="Select Directory")
-            if not selection:
-                return
-            self.state.root_dir = dirs[[str(d) for d in dirs].index(selection[0])]
-
+        entries = sorted(Path(p) for p in self.state.workspace.list())
+        children = []
+        for entry in entries:
+            if entry.is_dir():
+                children.append(TreeEntry(entry))
+            elif entry.is_file():
+                children.append(FileEntry(entry))
+        return SubMenu("Workspace Tree", children)
