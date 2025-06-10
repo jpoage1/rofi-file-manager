@@ -2,6 +2,7 @@
 import socket
 import json
 import logging
+import sys
 from menu_manager.payload import send_message, recv_message
 from menu_manager.payload import get_timestamp
 
@@ -14,37 +15,40 @@ def get_free_port():
         return s.getsockname()[1]
 
 def add_arguments(parser):
-    parser.add_argument('--host', default=None, help='Host address for socket server')
-    parser.add_argument('--port', type=int, default=None, help='Port number for socket server')
+    parser.add_argument('--host', default='127.0.0.1', help='Host address for socket server')
+    parser.add_argument('--port', type=int, default=get_free_port(), help='Port number for socket server')
+    parser.add_argument("--timeout", type=float, default=5.0, help="Connection timeout in seconds")
 
 def run_socket_server_interface(manager):
-
-    manager.host = manager.host or '127.0.0.1'
-    manager.port = int(manager.port) if getattr(manager, 'port', None) else get_free_port()
+    args = manager.args
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.bind((manager.host, manager.port))
+            s.bind((args.host, args.port))
             s.listen()
             print("Server Listening...")
+            s.settimeout(args.timeout)
             conn, _ = s.accept()
-            print(f"Accepting connections at {manager.host}:{manager.port}")
+            print(f"Accepting connections at {args.host}:{args.port}")
             print(f"Server Listening at {get_timestamp()}")
             with conn:
-                manager.socket_conn = conn
+                manager.run_selector = lambda entries, prompt, multi_select=False, text_input=True: run_via_socket(conn, entries, prompt, multi_select, text_input)
                 def send(msg): send_message(conn, msg)
                 def recv(): return recv_message(conn, 'server')
                 manager.send = send
                 manager.recv = recv
                 result = manager.main_menu()
+                manager.main_loop()
                 if result in ['EXIT_SIGNAL']:
                     return
-
         except Exception as e:
-            print(f"[Server] Error: {e}")
+            print(f"SERVER ERROR: {e}", file=sys.stderr)
+            sys.exit(1) # Indicate failure
         finally:
-            manager.socket_conn = None
+            if 's' in locals():
+                s.close()
+        sys.exit(0)
 
-def run_via_socket(conn, entries, prompt, multi_select=False, text_input=True):
+def run_via_socket(conn, entries, prompt, multi_select, text_input):
     
     menu_data_to_send = {
         "prompt": prompt,

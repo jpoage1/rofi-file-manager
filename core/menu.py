@@ -14,22 +14,17 @@ class MenuManager():
         self.state = state
         self.interface = getattr(args, 'interface', 'cli')
         self.frontend = getattr(args, 'frontend', 'fzf')
-        self.socket_conn = None
-        self.host = getattr(args, 'host', '127.0.0.1')
-        self.port = int(getattr(args, 'port', 65432))
-
+        self.args = args
+        self.plugins = None
         # self.search_options = SearchOptions(self, state)
-        self.load_plugins()
-        self.main_loop()
 
     def load_plugins(self):
         self.plugins = load_menu_plugins(self, self.state)
 
-    # def main_menu(self):
-    #     return self.navigate_menu_by_index(self._get_main_menu_structure)
-    
     def main_menu(self):
         from core.plugin_base import MenuEntry, MenuEntries
+        if not self.plugins:
+            self.load_plugins()
         entries = []
         for plugin in self.plugins:
             entry = plugin._build_menu()
@@ -75,13 +70,8 @@ class MenuManager():
         # End While
 
     def run_selector(self, entries, prompt, multi_select=False, text_input=True):
-        from core.plugins import load_selector_plugins
-        interface_plugins = load_selector_plugins()
-        select_fn = interface_plugins.get(self.frontend)
-        if not select_fn:
-            print(f"No selector plugin found for {self.frontend}")
-            exit(1)
-        return select_fn(entries, prompt, multi_select, text_input)
+        from core.selector import selector
+        return selector(self.frontend, entries, prompt, multi_select, text_input)
         
     def navigate_menu(self, menu_source):
         while True:

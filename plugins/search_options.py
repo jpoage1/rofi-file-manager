@@ -46,7 +46,9 @@ class SearchOptions(WorkspacePlugin):
                 break
             choice = choice[0]
 
-            if choice == "Reset to defaults":
+            if choice == "Exit":
+                break
+            elif choice == "Reset to defaults":
                 self.reset_defaults()
             elif choice.startswith("Regex pattern"):
                 self.state.regex_pattern = regex_prompt.prompt()
