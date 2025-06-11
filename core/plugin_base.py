@@ -6,7 +6,8 @@ import subprocess
 class MenuEntry:
     def __init__(self, label: str, action: Optional[Union[Callable[['MenuEntry'], None], str]] = None):
         self.label = label
-        self._action = action
+        if action:
+            self.action = action
 
     def to_dict(self):
         return {"name": self.label, "action": self._action}
@@ -16,7 +17,7 @@ class MenuEntry:
     
     def indexedLabel(self, i):
         return f"{i}: {self.label}"
-    
+
 class VoidEntry(MenuEntry):
     def __init__(self, label: str):
         self.label = label
@@ -47,9 +48,16 @@ class BinaryToggleEntry(MenuEntry):
 class MenuEntries(MenuEntry):
     def __init__(self, children):
         self.children = children
-    def get(self, i):
-        return self.children[i]
-
+    def entries(self):
+        return self.children
+    def get(self, index):
+        entry = self.children[index]
+        if callable(entry):
+            entry = entry()
+            # Don't cache result or the menu won't get updated correctly
+            # self.children[index] = entry  # cache result
+        return entry
+    
 class SubMenu(MenuEntries):
     def __init__(self, label: str, children: List[MenuEntry]):
         super().__init__(children)

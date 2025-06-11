@@ -6,6 +6,7 @@ def read_file_safe(path: Path) -> str:
         return path.read_text()
     except Exception:
         return ""
+    
 class Clipboard:
     def __init__(self):
         self.queue = []
