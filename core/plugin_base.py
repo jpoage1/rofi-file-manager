@@ -3,6 +3,20 @@ import os
 from pathlib import Path
 import subprocess
 
+class InterfacePlugin:
+    name: str
+    def interface(self): pass
+
+class MenuPlugin:
+    priority: int
+    def __init__(self, menu, state): pass
+
+class SelectorPlugin:
+    name: str
+    priority: int
+    def selector(self): pass
+
+
 class MenuEntry:
     def __init__(self, label: str, action: Optional[Union[Callable[['MenuEntry'], None], str]] = None):
         self.label = label
@@ -60,24 +74,26 @@ class MenuEntries(MenuEntry):
     def load(self):
         pass
     
-# class SubMenu(MenuEntries):
-#     def __init__(self, label: str, children: List[MenuEntry]):
-#         super().__init__(children)
-#         self.label = label
-
-#     def to_dict(self):
-#         return {"name": self.label, "action": [child.to_dict() for child in self.children]}
-    
 class SubMenu(MenuEntries):
-    def __init__(self, label: str, children_or_loader):
+    def __init__(self, label: str, children: List[MenuEntry]):
+        super().__init__(children)
         self.label = label
+
+    def to_dict(self):
+        return {"name": self.label, "action": [child.to_dict() for child in self.children]}
+    
+    def load(self):
+        pass
+
+class LazySubMenu(SubMenu):
+    def __init__(self, label: str, children_or_loader):
         if callable(children_or_loader):
             self._children_loader = children_or_loader
             self._children = None
         else:
             self._children_loader = None
             self._children = children_or_loader
-        super().__init__(self._children or [])
+        super().__init__(label, self._children or [])
 
     def entries(self):
         if self._children is None and self._children_loader:

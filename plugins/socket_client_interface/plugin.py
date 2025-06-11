@@ -1,0 +1,2 @@
+from plugins.socket_client_interface.socket_client_interface import run_socket_client_interface
+InterfacePlugin = run_socket_client_interface

@@ -1,0 +1,2 @@
+from plugins.socket_server_interface.socket_server_interface import SocketServerInterface
+InterfacePlugin = SocketServerInterface

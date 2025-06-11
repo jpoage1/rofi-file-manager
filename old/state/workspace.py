@@ -1,4 +1,4 @@
-# state/workspace.py
+# core/workspace.py
 import json
 import fcntl
 from pathlib import Path
@@ -7,12 +7,10 @@ from typing import List, Set
 import hashlib
 import logging
 
-from pathlib import Path
-
 from watchdog.observers import Observer
 import threading
 
-from core.watcher import CacheUpdater
+from menu_manager.watcher import CacheUpdater
 
 from filters.gitignore import is_ignored_by_stack
 from filters.path_utils import resolve_path_and_inode
@@ -379,67 +377,26 @@ class Workspace:
         self.start_file_watcher()
         self._validate_cache
 
-    # def _load_or_build_cache(self):
-    #     if self.cache_file.exists():
-    #         try:
-    #             text = self.cache_file.read_text()
-    #             return set(json.loads(text))
-    #         except:
-    #             return set()
-    #     else:
-    #         cache = self.build_cache()
-    #         cache_set = set(str(p) for p in cache)
-    #         self._save_cache(cache_set)
-    #         return cache_set
-
     def _load_or_build_cache(self):
         if self.cache_file.exists():
             try:
                 text = self.cache_file.read_text()
-                paths_as_str = json.loads(text)
-                return [Path(p) for p in paths_as_str]
-            except Exception:
-                return []
+                return set(json.loads(text))
+            except:
+                return set()
         else:
-            cache = self.build_cache()  # returns list[Path]
-            self._save_cache(cache)
-            return cache
-        
+            cache = self.build_cache()
+            cache_set = set(str(p) for p in cache)
+            self._save_cache(cache_set)
+            return cache_set
 
-    # def _save_cache(self):
-    #     text = json.dumps(self.cache)
-    #     self.cache_file.write_text(text)
-    
-    def _save_cache(self, cache_data=None):
-        if cache_data is None:
-            cache_data = self.cache
-        text = json.dumps([str(p) for p in cache_data])
+    def _save_cache(self):
+        text = json.dumps(self.cache)
         self.cache_file.write_text(text)
-        
 
-    def validate_cache_against_fs(cache: Set[str], dirs: Set[Path], files: Set[Path]) -> bool:
-        changed = False
-        current_entries = set()
-
-        for directory in dirs:
-            for dirpath, _, filenames in os.walk(directory):
-                for name in filenames:
-                    full_path = str(Path(dirpath) / name)
-                    current_entries.add(full_path)
-
-        for file_path in files:
-            if file_path.is_file():
-                current_entries.add(str(file_path))
-
-        if current_entries != cache:
-            cache.clear()
-            sorted_entries = sorted(current_entries)
-            cache.update(sorted_entries)
-            changed = True
-
-        return changed
     def _validate_cache(self):
-        updated = self.validate_cache_against_fs(self.cache, self.list_directories(), self.list_directories())
+        from state.scanner import validate_cache_against_fs
+        updated = validate_cache_against_fs(self.cache, self.list_directories(), self.list_directories())
         if updated:
             self._save_cache()
 

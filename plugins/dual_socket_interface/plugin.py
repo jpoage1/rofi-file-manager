@@ -1,0 +1,2 @@
+from plugins.dual_socket_interface.dual_socket_interface import DualSocketInterface
+InterfacePlugin = DualSocketInterface
