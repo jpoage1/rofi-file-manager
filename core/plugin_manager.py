@@ -1,6 +1,7 @@
 # Path: core/plugin_manager.py
 # Last Modified: 2025-06-11
 
+import logging
 
 class PluginManager:
     """
@@ -27,7 +28,7 @@ class PluginManager:
            not (hasattr(loader_instance, 'get_plugin_map') and hasattr(loader_instance, 'get_plugin_list')):
             raise ValueError(f"Loader for '{plugin_type}' must have load_plugins(), get_plugin_map(), and get_plugin_list() methods.")
         self._loaders[plugin_type] = loader_instance
-        print(f"PluginManager: Registered loader for type '{plugin_type}'.")
+        logging.info(f"PluginManager: Registered loader for type '{plugin_type}'.")
 
 
     def get_loader(self, plugin_type: str):
@@ -52,7 +53,7 @@ class PluginManager:
         loader = self.get_loader(plugin_type)
         if loader:
             return loader.load_plugins() # load_plugins triggers caching if not already loaded
-        print(f"Warning: No loader registered for plugin type '{plugin_type}'. Returning empty list.")
+        logging.warning(f"Warning: No loader registered for plugin type '{plugin_type}'. Returning empty list.")
         return []
 
     def get_plugin_map(self, plugin_type: str):
@@ -67,7 +68,7 @@ class PluginManager:
         loader = self.get_loader(plugin_type)
         if loader and hasattr(loader, 'get_plugin_map'):
             return loader.get_plugin_map()
-        print(f"Warning: No valid loader or get_plugin_map method for plugin type '{plugin_type}'. Returning empty map.")
+        logging.warning(f"Warning: No valid loader or get_plugin_map method for plugin type '{plugin_type}'. Returning empty map.")
         return {}
 
     def get_plugin_list(self, plugin_type: str):
@@ -82,5 +83,5 @@ class PluginManager:
         loader = self.get_loader(plugin_type)
         if loader and hasattr(loader, 'get_plugin_list'):
             return loader.get_plugin_list()
-        print(f"Warning: No valid loader or get_plugin_list method for plugin type '{plugin_type}'. Returning empty list.")
+        logging.warning(f"Warning: No valid loader or get_plugin_list method for plugin type '{plugin_type}'. Returning empty list.")
         return []

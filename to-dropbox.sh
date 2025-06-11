@@ -3,7 +3,8 @@
 # cat "${files[@]}" ./*/*.py main.py >/nfs/jasonpoage.com/drop/workspace-manager.py
 
 files=(
-    plugins/*.py
-    core/menu.py
+    plugins/*/*.py
+    core/*.py
+    filters/*.py
 )
 cat "${files[@]}" >/nfs/jasonpoage.com/drop/workspace-manager.py

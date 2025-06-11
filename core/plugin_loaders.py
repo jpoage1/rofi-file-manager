@@ -4,6 +4,7 @@
 import importlib
 import os
 import sys
+import logging
 
 # Assume PluginLoaderHelper is in plugin_loader_helper.py as before
 # from plugin_loader_helper import PluginLoaderHelper
@@ -24,7 +25,7 @@ class PluginLoaderHelper:
         """
         plugin_paths = []
         if not os.path.exists(self.plugin_base_dir):
-            print(f"Warning: Plugin base directory '{self.plugin_base_dir}' does not exist.")
+            logging.warning(f"Warning: Plugin base directory '{self.plugin_base_dir}' does not exist.")
             return []
 
         for item_name in os.listdir(self.plugin_base_dir):
@@ -52,9 +53,9 @@ class PluginLoaderHelper:
             try:
                 module = importlib.import_module(module_name)
                 loaded_modules[module_name] = module
-                print(f"Successfully loaded plugin module: {module_name}")
+                logging.info(f"Successfully loaded plugin module: {module_name}")
             except Exception as e:
-                print(f"Error loading plugin module '{module_name}': {e}")
+                logging.error(f"Error loading plugin module '{module_name}': {e}")
         return loaded_modules
 
     @staticmethod
@@ -67,7 +68,7 @@ class PluginLoaderHelper:
             if isinstance(plugin_class, type): # Ensure it's actually a class
                 return plugin_class
             else:
-                print(f"Warning: '{class_name}' in module '{module.__name__}' is not a class.")
+                logging.warnig(f"Warning: '{class_name}' in module '{module.__name__}' is not a class.")
         return None
 
 # Define the base plugin types for clarity (optional, but good practice)
@@ -112,7 +113,7 @@ class MenuPluginLoader:
             # print("MenuPluginLoader: Returning cached plugins.")
             return MenuPluginLoader._loaded_plugins
 
-        print("MenuPluginLoader: Loading plugins for the first time...")
+        logging.info("MenuPluginLoader: Loading plugins for the first time...")
         plugins = []
         loaded_modules = self.loader_helper.load_plugin_modules()
         for module_name, module in loaded_modules.items():
@@ -123,16 +124,17 @@ class MenuPluginLoader:
                     # IMPORTANT: If menu_context/state_context change, the cached instances
                     # might not have the correct context. Consider how you handle this.
                     if self.menu_context is None or self.state_context is None:
-                        print(f"Warning: MenuPlugin '{menu_plugin_class.name}' requires menu/state context but not provided on first load. Instantiating without (may cause errors).", file=sys.stderr)
+                        logging.warning(f"MenuPlugin '{menu_plugin_class.name}' requires menu/state context but not provided on first load. Instantiating without (may cause errors).", file=sys.stderr)
                         plugin_instance = menu_plugin_class(None, None) # Or raise error
                     else:
                         plugin_instance = menu_plugin_class(self.menu_context, self.state_context)
                     plugins.append(plugin_instance)
-                    print(f"Loaded MenuPlugin: {plugin_instance.name} from {module_name}")
+                    logging.info(f"Loaded MenuPlugin: {plugin_instance.name} from {module_name}")
                 except Exception as e:
-                    print(f"Error instantiating MenuPlugin from {module_name}: {e}")
+                    logging.error(f"Error instantiating MenuPlugin from {module_name}: {e}")
 
-        plugins.sort(key=lambda p: p.priority, reverse=True)
+        plugins.sort(key=lambda p: p.priority, reverse=False)
+        print(plugins)
         MenuPluginLoader._loaded_plugins = plugins # Cache the loaded plugins
         return plugins
 
@@ -149,7 +151,7 @@ class InterfacePluginLoader:
             # print("InterfacePluginLoader: Returning cached plugins.")
             return InterfacePluginLoader._loaded_plugins
 
-        print("InterfacePluginLoader: Loading plugins for the first time...")
+        logging.info("InterfacePluginLoader: Loading plugins for the first time...")
         plugins = []
         loaded_modules = self.loader_helper.load_plugin_modules()
         for module_name, module in loaded_modules.items():
@@ -158,9 +160,9 @@ class InterfacePluginLoader:
                 try:
                     plugin_instance = interface_plugin_class()
                     plugins.append(plugin_instance)
-                    print(f"Loaded InterfacePlugin: {plugin_instance.name} from {module_name}")
+                    logging.info(f"Loaded InterfacePlugin: {plugin_instance.name} from {module_name}")
                 except Exception as e:
-                    print(f"Error instantiating InterfacePlugin from {module_name}: {e}")
+                    logging.info(f"Error instantiating InterfacePlugin from {module_name}: {e}")
         plugins.sort(key=lambda p: p.priority, reverse=True)
         InterfacePluginLoader._loaded_plugins = plugins # Cache the loaded plugins
         InterfacePluginLoader._plugin_map = {p.name: p for p in plugins}
@@ -192,7 +194,7 @@ class SelectorPluginLoader:
             # print("SelectorPluginLoader: Returning cached plugins.")
             return SelectorPluginLoader._loaded_plugins
 
-        print("SelectorPluginLoader: Loading plugins for the first time...")
+        logging.info("SelectorPluginLoader: Loading plugins for the first time...")
         plugins = []
         loaded_modules = self.loader_helper.load_plugin_modules()
         for module_name, module in loaded_modules.items():
@@ -201,9 +203,9 @@ class SelectorPluginLoader:
                 try:
                     plugin_instance = selector_plugin_class()
                     plugins.append(plugin_instance)
-                    print(f"Loaded SelectorPlugin: {plugin_instance.name} from {module_name}")
+                    logging.info(f"Loaded SelectorPlugin: {plugin_instance.name} from {module_name}")
                 except Exception as e:
-                    print(f"Error instantiating SelectorPlugin from {module_name}: {e}")
+                    logging.error(f"Error instantiating SelectorPlugin from {module_name}: {e}")
         plugins.sort(key=lambda p: p.priority, reverse=True)
         SelectorPluginLoader._loaded_plugins = plugins # Cache the loaded plugins
         SelectorPluginLoader._plugin_map = {p.name: p for p in plugins}
