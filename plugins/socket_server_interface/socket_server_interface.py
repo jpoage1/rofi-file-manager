@@ -24,6 +24,10 @@ class SocketServerInterface(InterfacePlugin):
         parser.add_argument("--timeout", type=float, default=5.0, help="Connection timeout in seconds")
 
     @staticmethod
+    def interface(manager):
+        SocketServerInterface.run_socket_server_interface(manager)
+
+    @staticmethod
     def run_socket_server_interface(manager):
         args = manager.args
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

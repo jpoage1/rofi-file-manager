@@ -95,4 +95,8 @@ def load_interface_plugins() -> Dict[str, object]:
 
 def load_selector_plugins() -> Dict[str, object]:
     mods = load_plugins("selector", attr_checks=("name", "selector"))
-    return {mod.name: mod.selector for mod in mods}
+    return {
+        mod.name: mod.selector
+        for mod in mods
+        if not hasattr(mod, "available") or mod.available()
+    }

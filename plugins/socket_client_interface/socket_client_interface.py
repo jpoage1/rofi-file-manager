@@ -26,6 +26,10 @@ class SocketClientInterface(InterfacePlugin):
         parser.add_argument("--retry-interval", type=float, default=0.05, help="Retry interval in seconds")
 
     @staticmethod
+    def interface(args):
+        SocketClientInterface.run_socket_client_interface(args)
+        
+    @staticmethod
     def run_socket_client_interface(args):
         from core.selector import selector
         print(args)
