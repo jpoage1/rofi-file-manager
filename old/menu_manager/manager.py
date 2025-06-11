@@ -1,3 +1,6 @@
+# Path: old/menu_manager/manager.py
+# Last Modified: 2025-06-11
+
 # menu_manager/manager.py
 from pathlib import Path
 from menu_manager.core import edit_files

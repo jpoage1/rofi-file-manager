@@ -1,4 +1,6 @@
-# plugins/search_options.py
+# Path: plugins/filtering/filtering.py
+# Last Modified: 2025-06-11
+
 from core.plugin_base import WorkspacePlugin, SubMenu, BinaryToggleEntry, SelectorHelper, ExpansionDepthHelper, RegexPromptHelper, TextInputEntry, VoidEntry, MenuEntry
 
 class FilterOptions(WorkspacePlugin):

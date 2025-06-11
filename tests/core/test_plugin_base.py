@@ -1,3 +1,6 @@
+# Path: tests/core/test_plugin_base.py
+# Last Modified: 2025-06-11
+
 # tests/core/test_plugins.py
 
 import os

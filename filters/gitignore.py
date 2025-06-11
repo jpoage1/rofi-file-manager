@@ -1,3 +1,6 @@
+# Path: filters/gitignore.py
+# Last Modified: 2025-06-11
+
 # filters/gitignore.py
 import pathspec
 from pathlib import Path

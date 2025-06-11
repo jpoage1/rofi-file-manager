@@ -1,3 +1,6 @@
+# Path: old/menu_manager/menu_workspace.py
+# Last Modified: 2025-06-11
+
 # menu_manager/menu_workspace.py
 from pathlib import Path
 from filesystem.filesystem import list_files, list_directories

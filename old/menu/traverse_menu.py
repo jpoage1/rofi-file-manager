@@ -1,3 +1,6 @@
+# Path: old/menu/traverse_menu.py
+# Last Modified: 2025-06-11
+
 # menu_manager/traverse_menu.py
 
 from filesystem.filesystem import list_directories

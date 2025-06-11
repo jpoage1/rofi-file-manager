@@ -1,3 +1,6 @@
+# Path: plugins/workspace_management/workspace_management.py
+# Last Modified: 2025-06-11
+
 # plugins/workspace_management.py
 from pathlib import Path
 import re

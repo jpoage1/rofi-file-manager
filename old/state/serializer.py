@@ -1,3 +1,6 @@
+# Path: old/state/serializer.py
+# Last Modified: 2025-06-11
+
 # state/serializer.py
 import json
 from pathlib import Path

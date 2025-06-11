@@ -1,4 +1,6 @@
-# plugins/interface/socket_client_interface.py
+# Path: plugins/socket_client_interface/socket_client_interface.py
+# Last Modified: 2025-06-11
+
 import socket
 import json
 import logging

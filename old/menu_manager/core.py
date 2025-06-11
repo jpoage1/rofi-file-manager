@@ -1,3 +1,6 @@
+# Path: old/menu_manager/core.py
+# Last Modified: 2025-06-11
+
 # core/core.py
 
 import subprocess

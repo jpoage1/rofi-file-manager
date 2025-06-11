@@ -1,4 +1,6 @@
-# core/plugin_manager.py
+# Path: core/plugin_manager.py
+# Last Modified: 2025-06-11
+
 
 class PluginManager:
     """

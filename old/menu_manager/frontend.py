@@ -1,3 +1,6 @@
+# Path: old/menu_manager/frontend.py
+# Last Modified: 2025-06-11
+
 # menu_manager/interface.py
 import subprocess
 import json

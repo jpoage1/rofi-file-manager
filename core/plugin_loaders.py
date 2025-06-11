@@ -1,3 +1,6 @@
+# Path: core/plugin_loaders.py
+# Last Modified: 2025-06-11
+
 import importlib
 import os
 import sys

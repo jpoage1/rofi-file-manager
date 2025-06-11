@@ -1,3 +1,6 @@
+# Path: old/menu_manager/watcher.py
+# Last Modified: 2025-06-11
+
 # menu_manager/watcher.py
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler

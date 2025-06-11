@@ -1,3 +1,6 @@
+# Path: old/menu_manager/menu_clipboard.py
+# Last Modified: 2025-06-11
+
 # menu_manager/menu_clipboard.py
 from pathlib import Path
 from filesystem.filesystem import list_files

@@ -1,3 +1,6 @@
+# Path: core/filesystem.py
+# Last Modified: 2025-06-11
+
 # filesystem/filesystem.py
 from pathlib import Path
 # def list_directories(self) -> Set[Path]:

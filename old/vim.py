@@ -1,3 +1,6 @@
+# Path: old/vim.py
+# Last Modified: 2025-06-11
+
 def run_fzf_socket_loop(entries, prompt="workspace>", multi_select=False, text_input=True, server_address=('localhost', 12345)):
     while True:
         payload = {

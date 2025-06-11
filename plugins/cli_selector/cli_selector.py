@@ -1,3 +1,6 @@
+# Path: plugins/cli_selector/cli_selector.py
+# Last Modified: 2025-06-11
+
 # plugins/interface/cli_interface.py
 import logging 
 from core.plugin_base import SelectorPlugin

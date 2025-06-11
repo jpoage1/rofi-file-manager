@@ -1,3 +1,6 @@
+# Path: core/payload.py
+# Last Modified: 2025-06-11
+
 # menu_manager/payload.py
 import struct
 import time

@@ -1,4 +1,6 @@
-# plugins/workspace_tree.py
+# Path: plugins/workspace_tree/workspace_tree.py
+# Last Modified: 2025-06-11
+
 from core.utils import edit_files
 from core.filesystem import list_directories
 from pathlib import Path

@@ -1,3 +1,6 @@
+# Path: plugins/rofi_selector/rofi_selector.py
+# Last Modified: 2025-06-11
+
 # plugins/interface/fzf_interface.py
 import subprocess
 import shutil

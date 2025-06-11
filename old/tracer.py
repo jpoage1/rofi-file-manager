@@ -1,3 +1,6 @@
+# Path: old/tracer.py
+# Last Modified: 2025-06-11
+
 # tracer.py
 import io
 import sys

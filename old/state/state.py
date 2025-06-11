@@ -1,3 +1,6 @@
+# Path: old/state/state.py
+# Last Modified: 2025-06-11
+
 # old/state/state.py
 from pathlib import Path
 from state.workspace import Workspace

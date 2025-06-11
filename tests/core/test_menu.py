@@ -1,3 +1,6 @@
+# Path: tests/core/test_menu.py
+# Last Modified: 2025-06-11
+
 # tests/test_manager.py
 import pytest
 from unittest.mock import patch, MagicMock

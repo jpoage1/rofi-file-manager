@@ -1,3 +1,6 @@
+# Path: filters/main.py
+# Last Modified: 2025-06-11
+
 # filters/main.py
 from pathlib import Path
 from filters.gitignore import update_gitignore_specs, is_ignored_by_stack, load_gitignore_spec

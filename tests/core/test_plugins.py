@@ -1,3 +1,6 @@
+# Path: tests/core/test_plugins.py
+# Last Modified: 2025-06-11
+
 # tests/test_plugins.py
 import os
 import tempfile

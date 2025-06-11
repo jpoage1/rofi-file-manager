@@ -1,3 +1,6 @@
+# Path: core/state.py
+# Last Modified: 2025-06-11
+
 # core/state.py
 from pathlib import Path
 from core.workspace import Workspace

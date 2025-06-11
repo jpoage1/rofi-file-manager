@@ -1,3 +1,6 @@
+# Path: core/plugin_base.py
+# Last Modified: 2025-06-11
+
 from typing import Callable, List, Optional, Union
 import os
 from pathlib import Path

@@ -1,4 +1,6 @@
-# core/menu.py
+# Path: plugins/workspace_search/workspace_search.py
+# Last Modified: 2025-06-11
+
 from pathlib import Path
 from core.utils import edit_files
 import logging

@@ -1,3 +1,6 @@
+# Path: old/state/workspace_utils.py
+# Last Modified: 2025-06-11
+
 # workspace_utils.py
 from filters.filtering import matches_filters
 from filesystem.tree_utils import expand_paths

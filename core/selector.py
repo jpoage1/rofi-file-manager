@@ -1,3 +1,6 @@
+# Path: core/selector.py
+# Last Modified: 2025-06-11
+
 # core/selector.py
 
 # Import the PluginManager from its new location

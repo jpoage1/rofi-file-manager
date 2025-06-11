@@ -1,3 +1,6 @@
+# Path: core/plugins.py
+# Last Modified: 2025-06-11
+
 import importlib
 import os
 import sys

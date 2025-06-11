@@ -1,3 +1,6 @@
+# Path: old/state/workspace.py
+# Last Modified: 2025-06-11
+
 # core/workspace.py
 import json
 import fcntl

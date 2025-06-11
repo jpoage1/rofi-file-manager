@@ -1,3 +1,6 @@
+# Path: plugins/dual_socket_interface/dual_socket_interface.py
+# Last Modified: 2025-06-11
+
 # plugins/interface/dual_socket_interface.py
 import subprocess
 import sys

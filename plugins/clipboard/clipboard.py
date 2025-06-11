@@ -1,4 +1,6 @@
-# plugins/clipboard.py
+# Path: plugins/clipboard/clipboard.py
+# Last Modified: 2025-06-11
+
 from core.plugin_base import WorkspacePlugin, SubMenu, MenuEntry
 import pyperclip
 from pathlib import Path

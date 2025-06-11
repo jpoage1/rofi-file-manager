@@ -1,3 +1,6 @@
+# Path: old/state/search_options.py
+# Last Modified: 2025-06-11
+
 # search_options.py
 from pathlib import Path
 

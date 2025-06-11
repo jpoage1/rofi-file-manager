@@ -1,4 +1,6 @@
-# plugins/cli_interface/cli_interface.py
+# Path: plugins/cli_interface/cli_interface.py
+# Last Modified: 2025-06-11
+
 import logging 
 from core.plugin_base import InterfacePlugin
 
