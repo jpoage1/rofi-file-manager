@@ -57,14 +57,49 @@ class MenuEntries(MenuEntry):
             # Don't cache result or the menu won't get updated correctly
             # self.children[index] = entry  # cache result
         return entry
+    def load(self):
+        pass
+    
+# class SubMenu(MenuEntries):
+#     def __init__(self, label: str, children: List[MenuEntry]):
+#         super().__init__(children)
+#         self.label = label
+
+#     def to_dict(self):
+#         return {"name": self.label, "action": [child.to_dict() for child in self.children]}
     
 class SubMenu(MenuEntries):
-    def __init__(self, label: str, children: List[MenuEntry]):
-        super().__init__(children)
+    def __init__(self, label: str, children_or_loader):
         self.label = label
+        if callable(children_or_loader):
+            self._children_loader = children_or_loader
+            self._children = None
+        else:
+            self._children_loader = None
+            self._children = children_or_loader
+        super().__init__(self._children or [])
+
+    def entries(self):
+        if self._children is None and self._children_loader:
+            self._children = self._children_loader()
+            self.children = self._children
+        return self.children
+
+    def get(self, index):
+        entries = self.entries()
+        entry = entries[index]
+        if callable(entry):
+            entry = entry()
+        return entry
 
     def to_dict(self):
-        return {"name": self.label, "action": [child.to_dict() for child in self.children]}
+        return {
+            "name": self.label,
+            "action": [child.to_dict() for child in self.entries()]
+        }
+    def load(self):
+        self.entries()  # triggers population
+
 
 
 class PathEntry(MenuEntry):

@@ -377,23 +377,44 @@ class Workspace:
         self.start_file_watcher()
         self._validate_cache
 
+    # def _load_or_build_cache(self):
+    #     if self.cache_file.exists():
+    #         try:
+    #             text = self.cache_file.read_text()
+    #             return set(json.loads(text))
+    #         except:
+    #             return set()
+    #     else:
+    #         cache = self.build_cache()
+    #         cache_set = set(str(p) for p in cache)
+    #         self._save_cache(cache_set)
+    #         return cache_set
+
     def _load_or_build_cache(self):
         if self.cache_file.exists():
             try:
                 text = self.cache_file.read_text()
-                return set(json.loads(text))
-            except:
-                return set()
+                paths_as_str = json.loads(text)
+                return [Path(p) for p in paths_as_str]
+            except Exception:
+                return []
         else:
-            cache = self.build_cache()
-            cache_set = set(str(p) for p in cache)
-            self._save_cache(cache_set)
-            return cache_set
+            cache = self.build_cache()  # returns list[Path]
+            self._save_cache(cache)
+            return cache
+        
 
-    def _save_cache(self):
-        text = json.dumps(self.cache)
+    # def _save_cache(self):
+    #     text = json.dumps(self.cache)
+    #     self.cache_file.write_text(text)
+    
+    def _save_cache(self, cache_data=None):
+        if cache_data is None:
+            cache_data = self.cache
+        text = json.dumps([str(p) for p in cache_data])
         self.cache_file.write_text(text)
-
+        
+        
     def _validate_cache(self):
         from state.scanner import validate_cache_against_fs
         updated = validate_cache_against_fs(self.cache, self.list_directories(), self.list_directories())

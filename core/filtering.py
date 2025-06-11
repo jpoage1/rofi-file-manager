@@ -28,7 +28,7 @@ def filter_ignored(entries: list[Path], use_gitignore: bool, gitignore_specs: li
 
 def matches_filters(path: Path, state) -> bool:
     if not state.include_dotfiles and any(p.startswith('.') for p in path.parts if p not in ('.', '..')):
-        logging.debug(f"Skipping dotfile: {path}")
+        print(f"[DEBUG] Skipping dotfile: {path}")
         return False
     pattern = getattr(state, '_compiled_regex', None)
     if state.regex_mode and state.regex_pattern:
@@ -36,11 +36,11 @@ def matches_filters(path: Path, state) -> bool:
             try:
                 pattern = re.compile(state.regex_pattern)
             except re.error:
-                logging.debug(f"Invalid regex: {state.regex_pattern}")
+                print(f"[DEBUG] Invalid regex: {state.regex_pattern}")
                 return True
             state._compiled_regex = pattern
         if not pattern.search(str(path)):
-            logging.debug(f"Regex does not match: {path}")
+            print(f"[DEBUG] Regex does not match: {path}")
             return False
     return True
 
@@ -61,13 +61,13 @@ def filter_entries(entries: list[Path], state) -> list[Path]:
     filtered = []
     for e in entries:
         if state.search_dirs_only and not e.is_dir():
-            logging.debug(f"[DEBUG] Skipping non-dir: {e}")
+            print(f"[DEBUG] Skipping non-dir: {e}")
             continue
         if state.search_files_only and not e.is_file():
-            logging.debug(f"[DEBUG] Skipping non-file: {e}")
+            print(f"[DEBUG] Skipping non-file: {e}")
             continue
         if not matches_filters(e, state):
-            logging.debug(f"[DEBUG] Filtered out: {e}")
+            print(f"[DEBUG] Filtered out: {e}")
             continue
         filtered.append(e)
         logging.debug(f"filter_entries: INCLUDED (final list) '{e}'") # Most precise

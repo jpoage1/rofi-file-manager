@@ -35,10 +35,14 @@ class MenuManager():
         i = 1
         while 0 < len(stack):
             current_stack = stack[-1]
-
+            
+            # Regenerate dynamic menus
             if callable(current_stack):
-                next_stack = current_stack()
-                
+                current_stack = current_stack()
+            loader_fn = getattr(current_stack, 'load', None)
+            if callable(loader_fn):
+                loader_fn()
+
             indexed_entries = []
             if isinstance(current_stack, MenuEntries):
                 # Handle both root and submenu
