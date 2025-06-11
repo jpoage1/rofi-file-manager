@@ -11,6 +11,8 @@ class SocketServerInterface(InterfacePlugin):
     interface_type = "stateful"
     name = "socket-server"
 
+    priority = 500
+
     @staticmethod
     def get_free_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

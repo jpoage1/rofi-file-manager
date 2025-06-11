@@ -519,8 +519,8 @@ class Workspace:
         logging.debug("build_greedy_cache: Starting full workspace scan and caching.")
         workspace_roots = list(state.workspace.list_directories())
         processed_root_inodes = set()
-        project_root_for_gitignore = Path.cwd()
-        global_gitignore_specs = get_gitignore_specs(project_root_for_gitignore, state.use_gitignore)
+        # project_root_for_gitignore = Path.cwd()
+        # global_gitignore_specs = get_gitignore_specs(project_root_for_gitignore, state.use_gitignore)
 
         cache = []
 
@@ -545,7 +545,7 @@ class Workspace:
             )
             cache.extend(expanded)
 
-        cache.extend(self.list_files)
+        # cache.extend(self.list_files)
         logging.debug(f"build_greedy_cache: Cached {len(cache)} entries total.")
         return sorted(cache)
 

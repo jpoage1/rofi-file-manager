@@ -9,6 +9,8 @@ from core.plugin_base import WorkspacePlugin, LazySubMenu, FileEntry
 
 class WorkspaceSearch(WorkspacePlugin):
     priority = 1
+
+    name = "workspace-search"
     
     def __init__(self, menu, state):
         super().__init__(menu, state)

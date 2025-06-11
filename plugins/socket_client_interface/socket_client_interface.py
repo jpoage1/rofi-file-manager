@@ -14,6 +14,8 @@ class SocketClientInterface(InterfacePlugin):
     interface_type = "stateless"
     name = "socket-client"
 
+    priority = 1000
+
     @staticmethod
     def available():
         return shutil.which("fzf") is not None

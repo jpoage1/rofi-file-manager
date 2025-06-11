@@ -13,6 +13,8 @@ from core.plugin_base import SubMenu
 
 class WorkspaceTree(WorkspacePlugin):
     priority = 20
+
+    name = "workspace-tree"
     
     def __init__(self, menu, state):
         super().__init__(menu, state)

@@ -5,9 +5,11 @@ import subprocess
 
 class InterfacePlugin:
     name: str
+    priority: int
     def interface(self): pass
 
 class MenuPlugin:
+    name: str
     priority: int
     def __init__(self, menu, state): pass
 

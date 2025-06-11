@@ -49,6 +49,10 @@ class DualSocketInterface(InterfacePlugin):
         ])
     
     @staticmethod
+    def interface(args):
+        DualSocketInterface.run_dual_socket_mode(args)
+    
+    @staticmethod
     def run_dual_socket_mode(args):
         args.host = args.host or '127.0.0.1'
         args.port = int(args.port) if getattr(args, 'port', None) else DualSocketInterface.get_free_port()

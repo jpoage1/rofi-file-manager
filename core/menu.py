@@ -3,11 +3,12 @@ from pathlib import Path
 from core.utils import edit_files
 import logging
 
-from core.plugins import load_menu_plugins
+# from core.plugins import load_menu_plugins
 
 # logging.basicConfig(level=logging.DEBUG)
 
 from core.plugin_base import SubMenu
+from core.plugins import MenuPluginLoader
 
 class MenuManager():
     def __init__(self, state, args):
@@ -15,11 +16,69 @@ class MenuManager():
         self.interface = getattr(args, 'interface', 'cli')
         self.frontend = getattr(args, 'frontend', 'fzf')
         self.args = args
-        self.plugins = None
+        self.plugins = []
+        self.plugin_manager = None
+        self.interfaces = {}
+        self.selectors = {}
         # self.search_options = SearchOptions(self, state)
 
-    def load_plugins(self):
-        self.plugins = load_menu_plugins(self, self.state)
+    # def load_plugins(self):
+    #     self.plugins = load_menu_plugins(self, self.state)
+
+    # def load_plugins(self):
+    #     # Instantiate MenuPluginLoader, passing self (the MenuManager instance)
+    #     # as the 'menu' context and self.state as the 'state' context.
+    #     menu_plugin_loader = MenuPluginLoader(menu_context=self, state_context=self.state)
+
+    #     # Call load_plugins to get the list of instantiated MenuPlugin instances.
+    #     # This will either load them for the first time (and cache) or return cached ones.
+    #     self.plugins = menu_plugin_loader.load_plugins()
+
+    #     print(f"MenuManager: Loaded {len(self.plugins)} menu plugins.")
+    #     # You can now iterate self.plugins to interact with them, e.g.:
+    #     # for plugin in self.plugins:
+    #     #     plugin.do_something_with_menu() # Assuming your MenuPlugin has such a method
+
+    def register_menu_plugins(self, menu_plugin_loader):
+        """
+        Registers menu plugins with the MenuManager.
+        This method is expected to be called with an initialized MenuPluginLoader.
+        It retrieves the sorted list of MenuPlugin instances from the loader.
+        """
+        if not hasattr(menu_plugin_loader, 'load_plugins'):
+            raise ValueError("Provided menu_plugin_loader must have a 'load_plugins' method.")
+
+        # Get the sorted list of instantiated MenuPlugin objects from the loader
+        self.plugins = menu_plugin_loader.load_plugins()
+        logging.info(f"MenuManager: Registered {len(self.plugins)} menu plugins.")
+
+        # You can now iterate through self.plugins to integrate them into your menu logic
+        # Example:
+        # for plugin in self.plugins:
+        #     print(f"Menu Plugin '{plugin.name}' ready.")
+            # plugin.add_menu_items(self.menu_system) # if your menu plugins have this
+
+    def register_plugin_manager(self, plugin_manager):
+        self.plugin_manager = plugin_manager
+
+    def run_selector(self, entries, prompt, multi_select=False, text_input=True):
+        """
+        Executes the selector plugin identified by self.frontend.
+        """
+        # Access the selector plugins via the PluginManager
+        selector_plugin_map = self.plugin_manager.get_plugin_map("selectors")
+
+        # Get the specific selector plugin instance for the chosen frontend
+        selected_selector_plugin = selector_plugin_map.get(self.frontend)
+
+        if not selected_selector_plugin:
+            import sys # Import sys if not already at the top of core/menu.py
+            logging.error(f"Error: No selector plugin found for frontend '{self.frontend}'.")
+            sys.exit(1) # Or raise a custom exception
+
+        # Call the 'selector' method on the retrieved plugin instance
+        return selected_selector_plugin.selector(entries, prompt, multi_select, text_input)
+
     def main_menu(self):
         from core.plugin_base import MenuEntry, MenuEntries
         if not self.plugins:
@@ -70,10 +129,6 @@ class MenuManager():
             # result = indexed_entries[indices[0]].action()
         # End While
 
-    def run_selector(self, entries, prompt, multi_select=False, text_input=True):
-        from core.selector import selector
-        return selector(self.frontend, entries, prompt, multi_select, text_input)
-        
     # def navigate_menu(self, menu_source):
     #     while True:
     #         current_menu_dict = menu_source() if callable(menu_source) else menu_source

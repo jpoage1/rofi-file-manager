@@ -4,6 +4,8 @@ from core.plugin_base import WorkspacePlugin, SubMenu, BinaryToggleEntry, Select
 class FilterOptions(WorkspacePlugin):
     priority = 40
 
+    name = "filtering"
+
     def __init__(self, menu, state):
         super().__init__(menu, state)
         self.state.update({

@@ -3,8 +3,10 @@ from core.plugin_base import WorkspacePlugin, SubMenu, MenuEntry
 import pyperclip
 from pathlib import Path
 
-class Clipboard(WorkspacePlugin):
+class ClipboardMenu(WorkspacePlugin):
     priority = 50
+
+    name = "clipboard"
     
     def __init__(self, menu, state):
         super().__init__(menu, state)

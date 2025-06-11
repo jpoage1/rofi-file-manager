@@ -89,19 +89,24 @@ class SelectorPlugin:
     priority: int = 0
     def selector(self):
         raise NotImplementedError
+
+
 class MenuPluginLoader:
     _loaded_plugins = None  # Class-level cache for loaded MenuPlugin instances
-    _plugin_map = None      # <--- ADDED: Class-level cache for name-to-instance map
-    _plugin_list = None     # <--- ADDED: Class-level cache for list of names
 
     def __init__(self, menu_context=None, state_context=None):
         self.loader_helper = PluginLoaderHelper()
         self.menu_context = menu_context
         self.state_context = state_context
+        # Note: If menu_context or state_context can change between calls,
+        # you might need to re-evaluate caching behavior for MenuPlugin.
+        # For simplicity here, we assume if plugins are loaded, they are based on
+        # the *initial* context. If context changes, you might need a way to clear the cache.
 
     def load_plugins(self):
         if MenuPluginLoader._loaded_plugins is not None:
             # If already loaded, return the cached instances
+            # print("MenuPluginLoader: Returning cached plugins.")
             return MenuPluginLoader._loaded_plugins
 
         print("MenuPluginLoader: Loading plugins for the first time...")
@@ -111,9 +116,12 @@ class MenuPluginLoader:
             menu_plugin_class = self.loader_helper.get_plugin_class(module, "MenuPlugin")
             if menu_plugin_class:
                 try:
+                    # Instantiate with required arguments
+                    # IMPORTANT: If menu_context/state_context change, the cached instances
+                    # might not have the correct context. Consider how you handle this.
                     if self.menu_context is None or self.state_context is None:
                         print(f"Warning: MenuPlugin '{menu_plugin_class.name}' requires menu/state context but not provided on first load. Instantiating without (may cause errors).", file=sys.stderr)
-                        plugin_instance = menu_plugin_class(None, None)
+                        plugin_instance = menu_plugin_class(None, None) # Or raise error
                     else:
                         plugin_instance = menu_plugin_class(self.menu_context, self.state_context)
                     plugins.append(plugin_instance)
@@ -123,26 +131,7 @@ class MenuPluginLoader:
 
         plugins.sort(key=lambda p: p.priority, reverse=True)
         MenuPluginLoader._loaded_plugins = plugins # Cache the loaded plugins
-        
-        # <--- ADDED: Cache the map and list here
-        MenuPluginLoader._plugin_map = {p.name: p for p in plugins}
-        MenuPluginLoader._plugin_list = [p.name for p in plugins]
-
         return plugins
-
-    # <--- ADDED: get_plugin_map method
-    def get_plugin_map(self):
-        # Ensure plugins are loaded before returning map
-        if MenuPluginLoader._loaded_plugins is None:
-            self.load_plugins()
-        return MenuPluginLoader._plugin_map
-
-    # <--- ADDED: get_plugin_list method
-    def get_plugin_list(self):
-        # Ensure plugins are loaded before returning list
-        if MenuPluginLoader._loaded_plugins is None:
-            self.load_plugins()
-        return MenuPluginLoader._plugin_list
 
 class InterfacePluginLoader:
     _loaded_plugins = None  # Class-level cache for loaded InterfacePlugin instances
