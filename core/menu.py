@@ -8,7 +8,7 @@ import logging
 # logging.basicConfig(level=logging.DEBUG)
 
 from core.plugin_base import SubMenu
-from core.plugins import MenuPluginLoader
+from core.plugin_manager import PluginManager
 
 class MenuManager():
     def __init__(self, state, args):
@@ -17,7 +17,7 @@ class MenuManager():
         self.frontend = getattr(args, 'frontend', 'fzf')
         self.args = args
         self.plugins = []
-        self.plugin_manager = None
+        self.plugin_manager = PluginManager() 
         self.interfaces = {}
         self.selectors = {}
         # self.search_options = SearchOptions(self, state)

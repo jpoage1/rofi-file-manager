@@ -420,6 +420,7 @@ class Workspace:
     def validate_cache_against_fs(cache: Set[str], dirs: Set[Path], files: Set[Path]) -> bool:
         changed = False
         current_entries = set()
+        import os
 
         for directory in dirs:
             for dirpath, _, filenames in os.walk(directory):
